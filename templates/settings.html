@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeuralDesk — Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',system-ui,sans-serif; background:#f5f5f9; -webkit-font-smoothing:antialiased; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .layout { display:flex; min-height:100vh; }
+        .sidebar { width:240px; background:#fff; border-right:1px solid #eeeef2; padding:24px 0; position:fixed; height:100vh; display:flex; flex-direction:column; }
+        .sidebar-logo { padding:0 24px 28px; font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px; }
+        .sidebar-logo-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#5d5fef,#7c3aed); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(93,95,239,0.2); }
+        .sidebar-logo span { color:#5d5fef; }
+        .nav-section { font-size:11px; font-weight:600; color:#b0b0ba; text-transform:uppercase; letter-spacing:0.08em; padding:16px 24px 8px; }
+        .nav-item { display:flex; align-items:center; gap:10px; padding:10px 24px; font-size:14px; color:#6b6b78; cursor:pointer; text-decoration:none; transition:all 0.15s; margin:1px 8px; border-radius:8px; }
+        .nav-item:hover { background:#f5f5f9; color:#16161c; }
+        .nav-item.active { color:#5d5fef; background:#eef2ff; font-weight:600; }
+        .sidebar-bottom { margin-top:auto; padding:16px 24px; border-top:1px solid #eeeef2; }
+        .user-info { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+        .user-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#5d5fef,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:600; }
+        .user-name { font-size:13px; font-weight:600; color:#16161c; }
+        .user-email { font-size:11px; color:#9a9aa6; }
+        .logout-btn { display:flex; align-items:center; gap:8px; font-size:13px; color:#e53e3e; cursor:pointer; padding:8px 0; border:none; background:none; font-family:inherit; font-weight:500; }
+
+        .main { flex:1; margin-left:240px; padding:32px; max-width:800px; }
+        .header { margin-bottom:28px; animation:fadeUp 0.4s both; }
+        .header h1 { font-size:26px; font-weight:700; color:#16161c; }
+        .header-sub { font-size:14px; color:#9a9aa6; margin-top:4px; }
+
+        .card { background:#fff; border-radius:14px; padding:24px; border:1px solid #eeeef2; margin-bottom:16px; animation:fadeUp 0.4s both; }
+        .card h3 { font-size:16px; font-weight:600; color:#16161c; margin-bottom:4px; }
+        .card-desc { font-size:13px; color:#9a9aa6; margin-bottom:20px; }
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-size:13px; font-weight:600; color:#2c2c36; margin-bottom:6px; }
+        .form-group input { width:100%; padding:11px 14px; border:1.5px solid #e3e3ea; border-radius:10px; font-size:14px; outline:none; font-family:inherit; transition:border-color 0.15s; }
+        .form-group input:focus { border-color:#5d5fef; box-shadow:0 0 0 3px rgba(93,95,239,0.08); }
+        .form-row { display:flex; gap:16px; }
+        .form-row .form-group { flex:1; }
+        .btn-save { background:linear-gradient(135deg,#5d5fef,#7c3aed); color:#fff; border:none; padding:11px 24px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; box-shadow:0 4px 12px rgba(93,95,239,0.2); transition:all 0.2s; }
+        .btn-save:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(93,95,239,0.3); }
+        .btn-danger { background:#fff; color:#e53e3e; border:1.5px solid #e53e3e; padding:11px 24px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+        .btn-danger:hover { background:#fef2f2; }
+        .success-msg { display:none; font-size:13px; color:#16a34a; background:#ecfdf5; padding:10px 14px; border-radius:8px; margin-top:12px; }
+        .success-msg.show { display:block; animation:fadeUp 0.3s both; }
+
+        .api-key-row { display:flex; gap:8px; align-items:center; }
+        .api-key-row input { flex:1; }
+        .api-key-row .btn-save { padding:11px 16px; white-space:nowrap; }
+
+        .plan-card { display:flex; align-items:center; justify-content:space-between; padding:16px; background:#eef2ff; border-radius:10px; margin-bottom:16px; }
+        .plan-info h4 { font-size:15px; font-weight:600; color:#16161c; }
+        .plan-info p { font-size:13px; color:#6b6b78; }
+        .plan-badge { background:#5d5fef; color:#fff; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; }
+
+        @media (max-width:900px) { .sidebar{display:none} .main{margin-left:0} .form-row{flex-direction:column} }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="8" r="2.3" fill="#fff"/><circle cx="16.5" cy="6" r="1.7" fill="#fff" opacity="0.85"/><circle cx="16" cy="15.5" r="2.3" fill="#fff"/><line x1="8.7" y1="9" x2="14.4" y2="14.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="8.9" y1="7.2" x2="14.9" y2="6.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/></svg></div>
+            Neural<span>Desk</span>
+        </div>
+        <div class="nav-section">Main</div>
+        <a class="nav-item" href="/dashboard">📊 Dashboard</a>
+        <div class="nav-section">Account</div>
+        <a class="nav-item active" href="/settings">⚙️ Settings</a>
+        <a class="nav-item" href="#" onclick="alert('Coming soon')">💳 Billing</a>
+        <a class="nav-item" href="/docs">📖 Documentation</a>
+        <div class="sidebar-bottom">
+            <div class="user-info">
+                <div class="user-avatar" id="user-initial">U</div>
+                <div><div class="user-name" id="user-name">User</div><div class="user-email" id="user-email">email</div></div>
+            </div>
+            <button class="logout-btn" onclick="localStorage.clear();window.location.href='/login'">🚪 Logout</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1>Settings</h1>
+            <p class="header-sub">Manage your account and API keys</p>
+        </div>
+
+        <!-- Profile -->
+        <div class="card" style="animation-delay:0.1s">
+            <h3>Profile</h3>
+            <div class="card-desc">Your personal information</div>
+            <div class="form-row">
+                <div class="form-group"><label>Full Name</label><input type="text" id="set-name" placeholder="Your name"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="set-email" placeholder="you@company.com" disabled style="background:#f9f9fb"></div>
+            </div>
+            <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+            <div class="success-msg" id="profile-success">✓ Profile updated successfully</div>
+        </div>
+
+        <!-- Plan -->
+        <div class="card" style="animation-delay:0.15s">
+            <h3>Current Plan</h3>
+            <div class="card-desc">Your subscription details</div>
+            <div class="plan-card">
+                <div class="plan-info">
+                    <h4 id="plan-name">Free Plan</h4>
+                    <p>1 bot • 100 messages/month • 5MB storage</p>
+                </div>
+                <span class="plan-badge" id="plan-badge">FREE</span>
+            </div>
+            <button class="btn-save" onclick="alert('Billing coming soon!')">Upgrade Plan</button>
+        </div>
+
+        <!-- API Keys -->
+        <div class="card" style="animation-delay:0.2s">
+            <h3>API Keys</h3>
+            <div class="card-desc">Add your own LLM provider API keys (optional — Ollama is free)</div>
+            <div class="form-group">
+                <label>OpenAI API Key</label>
+                <div class="api-key-row">
+                    <input type="password" id="key-openai" placeholder="sk-...">
+                    <button class="btn-save" onclick="saveKey('openai')">Save</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Google Gemini API Key</label>
+                <div class="api-key-row">
+                    <input type="password" id="key-gemini" placeholder="AIza...">
+                    <button class="btn-save" onclick="saveKey('gemini')">Save</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Anthropic API Key</label>
+                <div class="api-key-row">
+                    <input type="password" id="key-anthropic" placeholder="sk-ant-...">
+                    <button class="btn-save" onclick="saveKey('anthropic')">Save</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Groq API Key</label>
+                <div class="api-key-row">
+                    <input type="password" id="key-groq" placeholder="gsk_...">
+                    <button class="btn-save" onclick="saveKey('groq')">Save</button>
+                </div>
+            </div>
+            <div class="success-msg" id="key-success">✓ API key saved</div>
+        </div>
+
+        <!-- Password -->
+        <div class="card" style="animation-delay:0.25s">
+            <h3>Change Password</h3>
+            <div class="card-desc">Update your account password</div>
+            <div class="form-group"><label>Current Password</label><input type="password" id="pw-current" placeholder="••••••••"></div>
+            <div class="form-group"><label>New Password</label><input type="password" id="pw-new" placeholder="••••••••"></div>
+            <button class="btn-save" onclick="alert('Password change coming soon!')">Update Password</button>
+        </div>
+
+        <!-- Danger -->
+        <div class="card" style="animation-delay:0.3s">
+            <h3 style="color:#e53e3e">Danger Zone</h3>
+            <div class="card-desc">Irreversible actions</div>
+            <button class="btn-danger" onclick="if(confirm('Delete your account and all bots? This cannot be undone.'))alert('Account deletion coming soon')">Delete Account</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "/login";
+
+document.getElementById("user-name").textContent = localStorage.getItem("user_name") || "User";
+document.getElementById("user-email").textContent = localStorage.getItem("user_email") || "";
+document.getElementById("user-initial").textContent = (localStorage.getItem("user_name") || "U").charAt(0).toUpperCase();
+document.getElementById("set-name").value = localStorage.getItem("user_name") || "";
+document.getElementById("set-email").value = localStorage.getItem("user_email") || "";
+
+function saveProfile() {
+    localStorage.setItem("user_name", document.getElementById("set-name").value);
+    document.getElementById("profile-success").classList.add("show");
+    setTimeout(() => document.getElementById("profile-success").classList.remove("show"), 3000);
+}
+
+function saveKey(provider) {
+    const key = document.getElementById(`key-${provider}`).value;
+    if (!key) return;
+    document.getElementById("key-success").classList.add("show");
+    setTimeout(() => document.getElementById("key-success").classList.remove("show"), 3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeuralDesk — Bot Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',system-ui,sans-serif; background:#f5f5f9; -webkit-font-smoothing:antialiased; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* Sidebar */
+        .layout { display:flex; min-height:100vh; }
+        .sidebar { width:240px; background:#fff; border-right:1px solid #eeeef2; padding:24px 0; position:fixed; height:100vh; display:flex; flex-direction:column; }
+        .sidebar-logo { padding:0 24px 28px; font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px; }
+        .sidebar-logo-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#5d5fef,#7c3aed); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(93,95,239,0.2); }
+        .sidebar-logo span { color:#5d5fef; }
+        .nav-section { font-size:11px; font-weight:600; color:#b0b0ba; text-transform:uppercase; letter-spacing:0.08em; padding:16px 24px 8px; }
+        .nav-item { display:flex; align-items:center; gap:10px; padding:10px 24px; font-size:14px; color:#6b6b78; cursor:pointer; text-decoration:none; transition:all 0.15s; margin:1px 8px; border-radius:8px; }
+        .nav-item:hover { background:#f5f5f9; color:#16161c; }
+        .nav-item.active { color:#5d5fef; background:#eef2ff; font-weight:600; }
+        .sidebar-bottom { margin-top:auto; padding:16px 24px; border-top:1px solid #eeeef2; }
+        .user-info { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+        .user-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#5d5fef,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:600; }
+        .user-name { font-size:13px; font-weight:600; color:#16161c; }
+        .user-email { font-size:11px; color:#9a9aa6; }
+        .logout-btn { display:flex; align-items:center; gap:8px; font-size:13px; color:#e53e3e; cursor:pointer; padding:8px 0; border:none; background:none; font-family:inherit; font-weight:500; }
+
+        /* Main */
+        .main { flex:1; margin-left:240px; padding:32px; }
+        .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; animation:fadeUp 0.4s both; }
+        .header-left { }
+        .back-link { font-size:13px; color:#5d5fef; text-decoration:none; font-weight:500; display:flex; align-items:center; gap:4px; margin-bottom:8px; }
+        .back-link:hover { text-decoration:underline; }
+        .header h1 { font-size:26px; font-weight:700; color:#16161c; letter-spacing:-0.02em; }
+        .header-sub { font-size:14px; color:#9a9aa6; margin-top:4px; }
+        .header-badge { background:#ecfdf5; color:#16a34a; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; margin-top:8px; display:inline-block; }
+
+        /* Tabs */
+        .tabs { display:flex; gap:2px; margin-bottom:24px; background:#fff; border-radius:12px; padding:4px; border:1px solid #eeeef2; animation:fadeUp 0.4s 0.1s both; }
+        .tab { padding:10px 20px; font-size:14px; color:#6b6b78; cursor:pointer; border-radius:8px; border:none; background:none; font-family:inherit; font-weight:500; transition:all 0.15s; display:flex; align-items:center; gap:6px; }
+        .tab:hover { color:#16161c; background:#f5f5f9; }
+        .tab.active { color:#5d5fef; background:#eef2ff; font-weight:600; }
+        .tab-icon { font-size:16px; }
+
+        /* Sections */
+        .section { display:none; animation:fadeUp 0.3s both; }
+        .section.active { display:block; }
+
+        /* Cards */
+        .card { background:#fff; border-radius:14px; padding:24px; border:1px solid #eeeef2; margin-bottom:14px; transition:all 0.2s; }
+        .card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.03); }
+        .card h3 { font-size:16px; font-weight:600; color:#16161c; margin-bottom:4px; }
+        .card-desc { font-size:13px; color:#9a9aa6; margin-bottom:18px; }
+
+        /* Forms */
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-size:13px; font-weight:600; color:#2c2c36; margin-bottom:6px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width:100%; padding:11px 14px; border:1.5px solid #e3e3ea; border-radius:10px;
+            font-size:14px; outline:none; font-family:inherit; transition:all 0.15s; background:#fff;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color:#5d5fef; box-shadow:0 0 0 3px rgba(93,95,239,0.08);
+        }
+        .form-group textarea { resize:vertical; min-height:100px; }
+        .form-group small { font-size:11px; color:#9a9aa6; margin-top:4px; display:block; }
+        .form-row { display:flex; gap:14px; }
+        .form-row .form-group { flex:1; }
+
+        /* Buttons */
+        .btn-primary {
+            background:linear-gradient(135deg,#5d5fef,#7c3aed); color:#fff; border:none;
+            padding:11px 24px; border-radius:10px; font-size:14px; font-weight:600;
+            cursor:pointer; font-family:inherit; box-shadow:0 4px 12px rgba(93,95,239,0.2); transition:all 0.2s;
+        }
+        .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(93,95,239,0.3); }
+        .btn-secondary { background:#fff; color:#5d5fef; border:1.5px solid #5d5fef; padding:11px 24px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+        .btn-secondary:hover { background:#fafaff; }
+
+        /* Upload Zone */
+        .upload-zone {
+            border:2px dashed #e0e0e8; border-radius:14px; padding:36px; text-align:center;
+            cursor:pointer; margin-bottom:14px; transition:all 0.2s; background:#fafaff;
+        }
+        .upload-zone:hover { border-color:#5d5fef; background:#eef2ff; }
+        .upload-icon { font-size:36px; margin-bottom:10px; }
+        .upload-text { font-size:14px; font-weight:500; color:#4a4a56; }
+        .upload-hint { font-size:12px; color:#9a9aa6; margin-top:4px; }
+        #upload-status { margin-top:12px; }
+
+        /* URL Input */
+        .url-row { display:flex; gap:8px; }
+        .url-row input { flex:1; }
+
+        /* DB Connector */
+        .db-fields { display:none; margin-top:14px; }
+        .db-fields.show { display:block; }
+
+        /* Source List */
+        .source-item {
+            display:flex; align-items:center; gap:14px; padding:14px 16px;
+            border:1px solid #eeeef2; border-radius:10px; margin-bottom:8px;
+            transition:all 0.15s; background:#fff;
+        }
+        .source-item:hover { border-color:#e0e0ff; box-shadow:0 2px 8px rgba(0,0,0,0.02); }
+        .source-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+        .source-icon-file { background:#eef2ff; }
+        .source-icon-url { background:#eff6ff; }
+        .source-icon-db { background:#ecfdf5; }
+        .source-info { flex:1; }
+        .source-name { font-size:14px; font-weight:500; color:#16161c; }
+        .source-meta { font-size:12px; color:#9a9aa6; margin-top:2px; }
+        .source-badge { font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
+        .badge-ready { background:#ecfdf5; color:#16a34a; }
+        .badge-processing { background:#fff7ed; color:#ea580c; }
+        .badge-failed { background:#fef2f2; color:#dc2626; }
+        .source-delete { background:none; border:none; color:#d0d0d8; cursor:pointer; font-size:18px; padding:4px 8px; border-radius:6px; transition:all 0.15s; }
+        .source-delete:hover { color:#e53e3e; background:#fef2f2; }
+
+        /* Test Chat */
+        .chat-container { max-width:450px; }
+        .chat-box { border:1px solid #eeeef2; border-radius:14px; overflow:hidden; background:#fff; }
+        .chat-header-bar { background:linear-gradient(135deg,#5d5fef,#7c3aed); color:#fff; padding:14px 18px; font-weight:600; font-size:15px; display:flex; align-items:center; gap:10px; }
+        .chat-header-dot { width:8px; height:8px; border-radius:50%; background:#4ade80; }
+        .chat-messages { height:340px; overflow-y:auto; padding:16px; background:#fafaff; }
+        .chat-input-bar { display:flex; gap:8px; padding:12px 16px; border-top:1px solid #eeeef2; background:#fff; }
+        .chat-input-bar input { flex:1; padding:10px 14px; border:1.5px solid #e3e3ea; border-radius:10px; outline:none; font-size:14px; font-family:inherit; }
+        .chat-input-bar input:focus { border-color:#5d5fef; }
+        .chat-input-bar button { background:linear-gradient(135deg,#5d5fef,#7c3aed); color:#fff; border:none; padding:10px 18px; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:600; font-size:14px; }
+        .msg { max-width:85%; padding:10px 14px; border-radius:14px; font-size:13px; line-height:1.6; margin-bottom:8px; word-wrap:break-word; }
+        .msg-bot { background:#fff; border:1px solid #eeeef2; align-self:flex-start; border-bottom-left-radius:4px; }
+        .msg-user { background:linear-gradient(135deg,#5d5fef,#7c3aed); color:#fff; margin-left:auto; border-bottom-right-radius:4px; }
+        .msg-typing { color:#9a9aa6; font-style:italic; }
+
+        /* Deploy */
+        .embed-box { background:#1a1a2e; border-radius:12px; padding:20px; margin:14px 0; font-family:'SF Mono',monospace; font-size:13px; color:#a78bfa; word-break:break-all; line-height:1.6; position:relative; }
+        .copy-btn { position:absolute; top:12px; right:12px; background:#5d5fef; color:#fff; border:none; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600; font-family:inherit; }
+        .copy-btn:hover { background:#4f51e0; }
+        .deploy-option { display:flex; align-items:center; gap:14px; padding:16px; border:1px solid #eeeef2; border-radius:10px; margin-bottom:8px; cursor:pointer; transition:all 0.15s; }
+        .deploy-option:hover { border-color:#e0e0ff; background:#fafaff; }
+        .deploy-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; }
+        .deploy-info h4 { font-size:14px; font-weight:600; color:#16161c; }
+        .deploy-info p { font-size:12px; color:#9a9aa6; }
+        .deploy-badge { font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; margin-left:auto; }
+        .badge-live { background:#ecfdf5; color:#16a34a; }
+        .badge-soon { background:#f3f4f6; color:#6b7280; }
+
+        /* Analytics */
+        .analytics-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+        .analytics-card { background:#fff; border-radius:12px; padding:20px; border:1px solid #eeeef2; text-align:center; transition:all 0.2s; }
+        .analytics-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.03); transform:translateY(-2px); }
+        .analytics-value { font-size:28px; font-weight:700; color:#16161c; }
+        .analytics-label { font-size:12px; color:#9a9aa6; margin-top:4px; }
+        .unanswered-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f5f5f9; font-size:13px; }
+        .unanswered-q { color:#4a4a56; flex:1; }
+        .unanswered-count { background:#fef2f2; color:#dc2626; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600; }
+
+        /* Success/Error Messages */
+        .success-msg { font-size:13px; color:#16a34a; background:#ecfdf5; padding:10px 14px; border-radius:8px; display:flex; align-items:center; gap:6px; }
+        .error-msg { font-size:13px; color:#dc2626; background:#fef2f2; padding:10px 14px; border-radius:8px; }
+
+        @media (max-width:900px) {
+            .sidebar { display:none; }
+            .main { margin-left:0; padding:20px; }
+            .tabs { flex-wrap:wrap; }
+            .form-row { flex-direction:column; }
+            .analytics-grid { grid-template-columns:1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="8" r="2.3" fill="#fff"/><circle cx="16.5" cy="6" r="1.7" fill="#fff" opacity="0.85"/><circle cx="16" cy="15.5" r="2.3" fill="#fff"/><line x1="8.7" y1="9" x2="14.4" y2="14.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="8.9" y1="7.2" x2="14.9" y2="6.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/></svg></div>
+            Neural<span>Desk</span>
+        </div>
+        <div class="nav-section">Main</div>
+        <a class="nav-item" href="/dashboard">📊 Dashboard</a>
+        <a class="nav-item active" href="#">🤖 Bot Manager</a>
+        <div class="nav-section">Account</div>
+        <a class="nav-item" href="/settings">⚙️ Settings</a>
+        <a class="nav-item" href="/docs">📖 Documentation</a>
+        <div class="sidebar-bottom">
+            <div class="user-info">
+                <div class="user-avatar" id="user-initial">U</div>
+                <div><div class="user-name" id="user-name">User</div><div class="user-email" id="user-email">email</div></div>
+            </div>
+            <button class="logout-btn" onclick="localStorage.clear();window.location.href='/login'">🚪 Logout</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div class="header-left">
+                <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+                <h1 id="bot-title">Bot</h1>
+                <p class="header-sub" id="bot-model">Loading...</p>
+                <span class="header-badge" id="bot-status">active</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('knowledge')"><span class="tab-icon">📄</span> Knowledge</button>
+            <button class="tab" onclick="switchTab('test')"><span class="tab-icon">💬</span> Test Chat</button>
+            <button class="tab" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span> Settings</button>
+            <button class="tab" onclick="switchTab('deploy')"><span class="tab-icon">🚀</span> Deploy</button>
+            <button class="tab" onclick="switchTab('analytics')"><span class="tab-icon">📊</span> Analytics</button>
+        </div>
+
+        <!-- KNOWLEDGE -->
+        <div class="section active" id="section-knowledge">
+            <div class="card">
+                <h3>Upload Files</h3>
+                <div class="card-desc">Drag and drop or click to upload documents</div>
+                <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Click to upload PDF, DOCX, CSV, Excel, JSON, TXT</div>
+                    <div class="upload-hint">Max 50MB per file</div>
+                </div>
+                <input type="file" id="file-input" style="display:none" onchange="uploadFile()" accept=".pdf,.docx,.csv,.xlsx,.xls,.json,.txt,.md,.html">
+                <div id="upload-status"></div>
+            </div>
+
+            <div class="card">
+                <h3>Add Website URL</h3>
+                <div class="card-desc">Crawl a webpage and add its content</div>
+                <div class="url-row">
+                    <input type="text" id="url-input" placeholder="https://example.com/page">
+                    <button class="btn-primary" onclick="addUrl()">Add URL</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Connect Database</h3>
+                <div class="card-desc">Import data from MySQL, MongoDB, or SQLite</div>
+                <div class="form-group">
+                    <select id="db-type" onchange="toggleDbFields()">
+                        <option value="">Select database type...</option>
+                        <option value="mysql">MySQL</option>
+                        <option value="mongodb">MongoDB</option>
+                        <option value="sqlite">SQLite (upload file)</option>
+                    </select>
+                </div>
+                <div class="db-fields" id="db-fields">
+                    <div class="form-row">
+                        <div class="form-group"><label>Host</label><input type="text" id="db-host" placeholder="localhost"></div>
+                        <div class="form-group"><label>Port</label><input type="number" id="db-port" placeholder="3306"></div>
+                    </div>
+                    <div class="form-group"><label>Database</label><input type="text" id="db-name" placeholder="my_database"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Username</label><input type="text" id="db-user" placeholder="root"></div>
+                        <div class="form-group"><label>Password</label><input type="password" id="db-pass" placeholder="password"></div>
+                    </div>
+                    <button class="btn-primary" onclick="connectDB()">Connect Database</button>
+                </div>
+                <div id="db-status" style="margin-top:12px"></div>
+            </div>
+
+            <div class="card">
+                <h3>Knowledge Sources</h3>
+                <div class="card-desc">All data sources powering this bot</div>
+                <div id="sources-list"><p style="color:#9a9aa6;font-size:13px">No sources yet. Upload a file or add a URL above.</p></div>
+            </div>
+        </div>
+
+        <!-- TEST CHAT -->
+        <div class="section" id="section-test">
+            <div class="card">
+                <h3>Test Your Bot</h3>
+                <div class="card-desc">Chat with your bot to verify it answers correctly</div>
+                <div class="chat-container">
+                    <div class="chat-box">
+                        <div class="chat-header-bar"><div class="chat-header-dot"></div> <span id="chat-header">Bot</span></div>
+                        <div class="chat-messages" id="test-messages" style="display:flex;flex-direction:column;"></div>
+                        <div class="chat-input-bar">
+                            <input type="text" id="test-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')testChat()">
+                            <button onclick="testChat()">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="section" id="section-settings">
+            <div class="card">
+                <h3>Bot Identity</h3>
+                <div class="card-desc">Name and personality of your bot</div>
+                <div class="form-row">
+                    <div class="form-group"><label>Bot Name</label><input type="text" id="set-name"></div>
+                    <div class="form-group"><label>Persona Name</label><input type="text" id="set-persona"><small>Name shown in the chat widget</small></div>
+                </div>
+                <div class="form-group"><label>Welcome Message</label><input type="text" id="set-welcome"></div>
+                <div class="form-group"><label>System Prompt</label><textarea id="set-prompt" placeholder="You are a helpful assistant..."></textarea><small>Instructions that shape how the bot responds</small></div>
+            </div>
+
+            <div class="card">
+                <h3>AI Model</h3>
+                <div class="card-desc">Choose which LLM powers this bot</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>LLM Provider</label>
+                        <select id="set-provider">
+                            <option value="ollama">Ollama (Free, Local)</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="gemini">Google Gemini</option>
+                            <option value="anthropic">Anthropic Claude</option>
+                            <option value="groq">Groq</option>
+                            <option value="mistral">Mistral</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Model</label><input type="text" id="set-model"><small>e.g. gemma3:latest, gpt-4o-mini, gemini-2.0-flash</small></div>
+                </div>
+                <div class="form-group"><label>API Key <span style="font-weight:400;color:#9a9aa6">(leave empty for Ollama)</span></label><input type="password" id="set-apikey" placeholder="sk-..."></div>
+            </div>
+
+            <div class="card">
+                <h3>Appearance</h3>
+                <div class="card-desc">Customize the chat widget look</div>
+                <div class="form-row">
+                    <div class="form-group"><label>Primary Color</label><input type="color" id="set-color" value="#6366f1" style="height:44px;padding:4px;cursor:pointer"></div>
+                    <div class="form-group"><label>Widget Position</label>
+                        <select id="set-position">
+                            <option value="bottom-right">Bottom Right</option>
+                            <option value="bottom-left">Bottom Left</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="saveSettings()" style="margin-top:4px">Save All Settings</button>
+            <div id="settings-success" style="margin-top:12px"></div>
+        </div>
+
+        <!-- DEPLOY -->
+        <div class="section" id="section-deploy">
+            <div class="card">
+                <h3>Embed on Your Website</h3>
+                <div class="card-desc">Copy this code and paste it before the closing &lt;/body&gt; tag on your website</div>
+                <div class="embed-box" id="embed-code"></div>
+                <button class="btn-primary" onclick="copyEmbed()" style="margin-top:4px">📋 Copy Embed Code</button>
+            </div>
+
+            <div class="card">
+                <h3>Deployment Channels</h3>
+                <div class="card-desc">Where your bot is available</div>
+                <div class="deploy-option">
+                    <div class="deploy-icon" style="background:#eef2ff">🌐</div>
+                    <div class="deploy-info"><h4>Website Widget</h4><p>Embed on any website with one line of code</p></div>
+                    <span class="deploy-badge badge-live">Live</span>
+                </div>
+                <div class="deploy-option">
+                    <div class="deploy-icon" style="background:#ecfdf5">💬</div>
+                    <div class="deploy-info"><h4>WhatsApp</h4><p>Connect to WhatsApp Business API</p></div>
+                    <span class="deploy-badge badge-soon">Coming Soon</span>
+                </div>
+                <div class="deploy-option">
+                    <div class="deploy-icon" style="background:#eff6ff">✈️</div>
+                    <div class="deploy-info"><h4>Telegram</h4><p>Create a Telegram bot</p></div>
+                    <span class="deploy-badge badge-soon">Coming Soon</span>
+                </div>
+                <div class="deploy-option">
+                    <div class="deploy-icon" style="background:#fff7ed">💼</div>
+                    <div class="deploy-info"><h4>Slack</h4><p>Add to your Slack workspace</p></div>
+                    <span class="deploy-badge badge-soon">Coming Soon</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS -->
+        <div class="section" id="section-analytics">
+            <div class="analytics-grid" id="analytics-grid"></div>
+            <div class="card">
+                <h3>Top Unanswered Questions</h3>
+                <div class="card-desc">These questions couldn't be answered — upload more content to cover them</div>
+                <div id="unanswered-list"><p style="color:#9a9aa6;font-size:13px">No unanswered questions yet.</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const botId = window.location.pathname.split("/bot/")[1];
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "/login";
+const headers = { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+let botData = {};
+let testConvId = null;
+
+// User info
+document.getElementById("user-name").textContent = localStorage.getItem("user_name") || "User";
+document.getElementById("user-email").textContent = localStorage.getItem("user_email") || "";
+document.getElementById("user-initial").textContent = (localStorage.getItem("user_name") || "U").charAt(0).toUpperCase();
+
+// Tabs
+function switchTab(tab) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    event.target.closest(".tab").classList.add("active");
+    document.getElementById(`section-${tab}`).classList.add("active");
+    if (tab === "analytics") loadAnalytics();
+}
+
+// Load bot
+async function loadBot() {
+    const r = await fetch(`/api/bots/${botId}`, { headers });
+    botData = await r.json();
+    document.getElementById("bot-title").textContent = botData.name;
+    document.getElementById("bot-model").textContent = `${botData.llm_provider} / ${botData.llm_model}`;
+    document.getElementById("bot-status").textContent = botData.status;
+    document.getElementById("chat-header").textContent = botData.persona_name || botData.name;
+    document.getElementById("set-name").value = botData.name || "";
+    document.getElementById("set-persona").value = botData.persona_name || "";
+    document.getElementById("set-provider").value = botData.llm_provider || "ollama";
+    document.getElementById("set-model").value = botData.llm_model || "";
+    document.getElementById("set-welcome").value = botData.welcome_message || "";
+    document.getElementById("set-prompt").value = botData.system_prompt || "";
+    document.getElementById("set-color").value = botData.primary_color || "#6366f1";
+    document.getElementById("embed-code").textContent = `<script src="https://yourdomain.com/widget.js" data-bot-id="${botId}" data-api-url="https://yourdomain.com"><\/script>`;
+    loadSources();
+}
+
+// Sources
+async function loadSources() {
+    const r = await fetch(`/api/bots/${botId}/knowledge`, { headers });
+    const sources = await r.json();
+    const list = document.getElementById("sources-list");
+    if (sources.length === 0) { list.innerHTML = '<p style="color:#9a9aa6;font-size:13px">No sources yet.</p>'; return; }
+    list.innerHTML = sources.map(s => {
+        const icon = s.type === 'url' ? 'source-icon-url' : s.type === 'database' ? 'source-icon-db' : 'source-icon-file';
+        const emoji = s.type === 'url' ? '🌐' : s.type === 'database' ? '🗄️' : '📄';
+        const badge = s.status === 'ready' ? 'badge-ready' : s.status === 'processing' ? 'badge-processing' : 'badge-failed';
+        return `<div class="source-item">
+            <div class="source-icon ${icon}">${emoji}</div>
+            <div class="source-info"><div class="source-name">${s.name}</div><div class="source-meta">${s.chunk_count || 0} chunks · ${s.type}</div></div>
+            <span class="source-badge ${badge}">${s.status}</span>
+            <button class="source-delete" onclick="deleteSource('${s.id}')" title="Delete">✕</button>
+        </div>`;
+    }).join("");
+}
+
+// Upload
+async function uploadFile() {
+    const file = document.getElementById("file-input").files[0];
+    if (!file) return;
+    document.getElementById("upload-status").innerHTML = '<div class="success-msg" style="background:#eef2ff;color:#5d5fef">⏳ Uploading ' + file.name + '... please wait</div>';
+    const formData = new FormData();
+    formData.append("file", file);
+    const r = await fetch(`/api/bots/${botId}/knowledge/file`, { method: "POST", headers: { "Authorization": `Bearer ${token}` }, body: formData });
+    const data = await r.json();
+    if (data.error) {
+        document.getElementById("upload-status").innerHTML = '<div class="error-msg">❌ ' + data.error + '</div>';
+    } else {
+        document.getElementById("upload-status").innerHTML = '<div class="success-msg">✓ Uploaded! ' + data.chunks_created + ' chunks created.</div>';
+        loadSources();
+    }
+    document.getElementById("file-input").value = "";
+}
+
+// URL
+async function addUrl() {
+    const url = document.getElementById("url-input").value.trim();
+    if (!url) return;
+    const r = await fetch(`/api/bots/${botId}/knowledge/url`, { method: "POST", headers, body: JSON.stringify({ url }) });
+    const data = await r.json();
+    if (data.error) alert("Error: " + data.error);
+    else { document.getElementById("url-input").value = ""; loadSources(); }
+}
+
+// DB
+function toggleDbFields() {
+    const val = document.getElementById("db-type").value;
+    document.getElementById("db-fields").classList.toggle("show", val && val !== "sqlite");
+}
+
+async function connectDB() {
+    document.getElementById("db-status").innerHTML = '<div class="success-msg" style="background:#eef2ff;color:#5d5fef">⏳ Connecting...</div>';
+    const r = await fetch(`/api/bots/${botId}/knowledge/database`, { method: "POST", headers, body: JSON.stringify({
+        db_type: document.getElementById("db-type").value,
+        host: document.getElementById("db-host").value,
+        port: parseInt(document.getElementById("db-port").value) || 3306,
+        database: document.getElementById("db-name").value,
+        username: document.getElementById("db-user").value,
+        password: document.getElementById("db-pass").value,
+    })});
+    const data = await r.json();
+    if (data.error) document.getElementById("db-status").innerHTML = '<div class="error-msg">❌ ' + data.error + '</div>';
+    else { document.getElementById("db-status").innerHTML = '<div class="success-msg">✓ Connected! ' + (data.tables_found||0) + ' tables, ' + (data.chunks_created||0) + ' chunks.</div>'; loadSources(); }
+}
+
+// Delete source
+async function deleteSource(sourceId) {
+    if (!confirm("Delete this source?")) return;
+    await fetch(`/api/bots/${botId}/knowledge/${sourceId}`, { method: "DELETE", headers });
+    loadSources();
+}
+
+// Settings
+async function saveSettings() {
+    await fetch(`/api/bots/${botId}`, { method: "PUT", headers, body: JSON.stringify({
+        name: document.getElementById("set-name").value,
+        persona_name: document.getElementById("set-persona").value,
+        llm_provider: document.getElementById("set-provider").value,
+        llm_model: document.getElementById("set-model").value,
+        welcome_message: document.getElementById("set-welcome").value,
+        system_prompt: document.getElementById("set-prompt").value,
+        primary_color: document.getElementById("set-color").value,
+    })});
+    document.getElementById("settings-success").innerHTML = '<div class="success-msg">✓ Settings saved successfully</div>';
+    setTimeout(() => document.getElementById("settings-success").innerHTML = "", 3000);
+    loadBot();
+}
+
+// Test chat
+async function testChat() {
+    const input = document.getElementById("test-input");
+    const msg = input.value.trim();
+    if (!msg) return;
+    const container = document.getElementById("test-messages");
+    container.innerHTML += `<div class="msg msg-user">${msg}</div>`;
+    input.value = "";
+    container.innerHTML += '<div class="msg msg-bot msg-typing" id="typing">Thinking...</div>';
+    container.scrollTop = container.scrollHeight;
+    const r = await fetch('/api/v1/chat', { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bot_id: botId, message: msg, conversation_id: testConvId }) });
+    const data = await r.json();
+    document.getElementById("typing").remove();
+    testConvId = data.conversation_id;
+    const formatted = (data.answer||"").replace(/\n/g, "<br>");
+    container.innerHTML += `<div class="msg msg-bot">${formatted}</div>`;
+    container.scrollTop = container.scrollHeight;
+}
+
+// Embed
+function copyEmbed() {
+    navigator.clipboard.writeText(`<script src="https://yourdomain.com/widget.js" data-bot-id="${botId}" data-api-url="https://yourdomain.com"><\/script>`);
+    alert("Embed code copied!");
+}
+
+// Analytics
+async function loadAnalytics() {
+    const r = await fetch(`/api/bots/${botId}/analytics`, { headers });
+    const data = await r.json();
+    document.getElementById("analytics-grid").innerHTML = `
+        <div class="analytics-card"><div class="analytics-value">${data.total_conversations}</div><div class="analytics-label">Conversations</div></div>
+        <div class="analytics-card"><div class="analytics-value">${data.total_messages}</div><div class="analytics-label">Messages</div></div>
+        <div class="analytics-card"><div class="analytics-value">${data.satisfaction_pct}%</div><div class="analytics-label">Satisfaction</div></div>
+        <div class="analytics-card"><div class="analytics-value">${data.thumbs_up}</div><div class="analytics-label">👍 Positive</div></div>
+        <div class="analytics-card"><div class="analytics-value">${data.thumbs_down}</div><div class="analytics-label">👎 Negative</div></div>
+        <div class="analytics-card"><div class="analytics-value">${data.unanswered_questions}</div><div class="analytics-label">Unanswered</div></div>
+    `;
+    const ur = await fetch(`/api/bots/${botId}/analytics/unanswered`, { headers });
+    const unanswered = await ur.json();
+    const ulist = document.getElementById("unanswered-list");
+    if (unanswered.length === 0) ulist.innerHTML = '<p style="color:#9a9aa6;font-size:13px">No unanswered questions yet.</p>';
+    else ulist.innerHTML = unanswered.map(q => `<div class="unanswered-item"><span class="unanswered-q">${q.question}</span><span class="unanswered-count">${q.frequency}x</span></div>`).join("");
+}
+
+loadBot();
+</script>
+</body>
+</html>

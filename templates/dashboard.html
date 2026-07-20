@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeuralDesk — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #f5f5f9; -webkit-font-smoothing: antialiased; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+        /* Sidebar */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 240px; background: #fff; border-right: 1px solid #eeeef2;
+            padding: 24px 0; position: fixed; height: 100vh;
+            display: flex; flex-direction: column;
+        }
+        .sidebar-logo {
+            padding: 0 24px 28px; font-size: 20px; font-weight: 700;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-logo-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: linear-gradient(135deg, #5d5fef, #7c3aed);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(93,95,239,0.2);
+        }
+        .sidebar-logo span { color: #5d5fef; }
+        .nav-section { font-size: 11px; font-weight: 600; color: #b0b0ba; text-transform: uppercase; letter-spacing: 0.08em; padding: 16px 24px 8px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px; padding: 10px 24px;
+            font-size: 14px; color: #6b6b78; cursor: pointer; text-decoration: none;
+            transition: all 0.15s; margin: 1px 8px; border-radius: 8px;
+        }
+        .nav-item:hover { background: #f5f5f9; color: #16161c; }
+        .nav-item.active { color: #5d5fef; background: #eef2ff; font-weight: 600; }
+        .sidebar-bottom { margin-top: auto; padding: 16px 24px; border-top: 1px solid #eeeef2; }
+        .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .user-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, #5d5fef, #7c3aed);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 14px; font-weight: 600;
+        }
+        .user-details { flex: 1; }
+        .user-name { font-size: 13px; font-weight: 600; color: #16161c; }
+        .user-email { font-size: 11px; color: #9a9aa6; }
+        .logout-btn {
+            display: flex; align-items: center; gap: 8px; font-size: 13px;
+            color: #e53e3e; cursor: pointer; padding: 8px 0; border: none;
+            background: none; font-family: inherit; font-weight: 500;
+        }
+        .logout-btn:hover { color: #c53030; }
+
+        /* Main */
+        .main { flex: 1; margin-left: 240px; padding: 32px; }
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 28px; animation: fadeUp 0.4s both;
+        }
+        .header h1 { font-size: 26px; font-weight: 700; color: #16161c; letter-spacing: -0.02em; }
+        .header-sub { font-size: 14px; color: #9a9aa6; margin-top: 4px; }
+        .btn-primary {
+            background: linear-gradient(135deg, #5d5fef, #7c3aed); color: #fff;
+            border: none; padding: 11px 22px; border-radius: 10px; font-size: 14px;
+            font-weight: 600; cursor: pointer; display: flex; align-items: center;
+            gap: 6px; font-family: inherit; box-shadow: 0 4px 12px rgba(93,95,239,0.2);
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(93,95,239,0.3); }
+
+        /* Stats */
+        .stats {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+            margin-bottom: 28px; animation: fadeUp 0.4s 0.1s both;
+        }
+        .stat-card {
+            background: #fff; border-radius: 14px; padding: 20px;
+            border: 1px solid #eeeef2; transition: all 0.2s;
+        }
+        .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.04); transform: translateY(-2px); }
+        .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .stat-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+        }
+        .stat-icon-purple { background: #eef2ff; }
+        .stat-icon-green { background: #ecfdf5; }
+        .stat-icon-blue { background: #eff6ff; }
+        .stat-icon-orange { background: #fff7ed; }
+        .stat-change { font-size: 11px; font-weight: 600; color: #16a34a; background: #ecfdf5; padding: 2px 8px; border-radius: 12px; }
+        .stat-value { font-size: 30px; font-weight: 700; color: #16161c; letter-spacing: -0.02em; }
+        .stat-label { font-size: 13px; color: #9a9aa6; margin-top: 2px; }
+
+        /* Bot Cards */
+        .section-title { font-size: 16px; font-weight: 600; color: #16161c; margin-bottom: 16px; animation: fadeUp 0.4s 0.2s both; }
+        .bots-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 14px; animation: fadeUp 0.4s 0.2s both;
+        }
+        .bot-card {
+            background: #fff; border-radius: 14px; padding: 22px;
+            border: 1px solid #eeeef2; transition: all 0.25s; position: relative; overflow: hidden;
+        }
+        .bot-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.06); transform: translateY(-3px); border-color: #e0e0ff; }
+        .bot-card-accent {
+            position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #5d5fef, #7c3aed);
+        }
+        .bot-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .bot-info { display: flex; align-items: center; gap: 12px; }
+        .bot-icon {
+            width: 42px; height: 42px; border-radius: 12px; background: #eef2ff;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+        }
+        .bot-name { font-size: 16px; font-weight: 600; color: #16161c; }
+        .bot-provider { font-size: 12px; color: #9a9aa6; margin-top: 2px; }
+        .bot-badge {
+            font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600;
+        }
+        .badge-active { background: #ecfdf5; color: #16a34a; }
+        .badge-draft { background: #f3f4f6; color: #6b7280; }
+        .bot-stats {
+            display: flex; gap: 20px; font-size: 13px; color: #6b6b78;
+            margin: 14px 0; padding: 12px 0; border-top: 1px solid #f5f5f9; border-bottom: 1px solid #f5f5f9;
+        }
+        .bot-stat-item { display: flex; align-items: center; gap: 5px; }
+        .bot-actions { display: flex; gap: 8px; margin-top: 14px; }
+        .bot-btn {
+            font-size: 13px; padding: 8px 16px; border-radius: 8px;
+            border: 1px solid #eeeef2; background: #fff; cursor: pointer;
+            color: #4a4a56; font-family: inherit; font-weight: 500; transition: all 0.15s;
+        }
+        .bot-btn:hover { border-color: #5d5fef; color: #5d5fef; background: #fafaff; }
+        .bot-btn-primary {
+            background: #5d5fef; color: #fff; border-color: #5d5fef;
+        }
+        .bot-btn-primary:hover { background: #4f51e0; }
+        .bot-btn-danger { color: #e53e3e; }
+        .bot-btn-danger:hover { border-color: #e53e3e; color: #e53e3e; background: #fef2f2; }
+
+        /* Create Card */
+        .create-card {
+            border: 2px dashed #e0e0e8; display: flex; align-items: center;
+            justify-content: center; min-height: 200px; cursor: pointer;
+            border-radius: 14px; transition: all 0.2s;
+        }
+        .create-card:hover { border-color: #5d5fef; background: #fafaff; }
+        .create-card-inner { text-align: center; color: #9a9aa6; }
+        .create-card-icon {
+            width: 56px; height: 56px; border-radius: 50%; background: #eef2ff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin: 0 auto 12px; color: #5d5fef;
+        }
+        .create-card-inner p { font-size: 14px; font-weight: 500; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1000;
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #fff; border-radius: 20px; padding: 32px;
+            width: 520px; max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15); animation: fadeUp 0.3s both;
+        }
+        .modal h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: #16161c; }
+        .modal-sub { font-size: 14px; color: #9a9aa6; margin-bottom: 24px; }
+        .modal .form-group { margin-bottom: 16px; }
+        .modal .form-group label { display: block; font-size: 13px; font-weight: 600; color: #2c2c36; margin-bottom: 6px; }
+        .modal .form-group input, .modal .form-group select, .modal .form-group textarea {
+            width: 100%; padding: 11px 14px; border: 1.5px solid #e3e3ea; border-radius: 10px;
+            font-size: 14px; outline: none; font-family: inherit; transition: border-color 0.15s;
+        }
+        .modal .form-group input:focus, .modal .form-group select:focus, .modal .form-group textarea:focus {
+            border-color: #5d5fef; box-shadow: 0 0 0 3px rgba(93,95,239,0.08);
+        }
+        .modal .form-group textarea { resize: vertical; min-height: 80px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+        .btn-cancel {
+            padding: 11px 22px; border: 1.5px solid #e3e3ea; border-radius: 10px;
+            background: #fff; cursor: pointer; font-size: 14px; font-family: inherit; font-weight: 500;
+        }
+        .btn-cancel:hover { border-color: #d0d0d8; }
+
+        /* Templates */
+        .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+        .template-card {
+            border: 1.5px solid #eeeef2; border-radius: 10px; padding: 14px;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .template-card:hover { border-color: #c7c7ff; background: #fafaff; }
+        .template-card.selected { border-color: #5d5fef; background: #eef2ff; }
+        .template-icon { font-size: 22px; margin-bottom: 6px; }
+        .template-name { font-weight: 600; font-size: 13px; color: #16161c; }
+        .template-desc { font-size: 11px; color: #9a9aa6; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            .bots-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="8" r="2.3" fill="#fff"/><circle cx="16.5" cy="6" r="1.7" fill="#fff" opacity="0.85"/><circle cx="16" cy="15.5" r="2.3" fill="#fff"/><line x1="8.7" y1="9" x2="14.4" y2="14.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="8.9" y1="7.2" x2="14.9" y2="6.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/></svg>
+            </div>
+            Neural<span>Desk</span>
+        </div>
+        <div class="nav-section">Main</div>
+        <a class="nav-item active" href="/dashboard">📊 Dashboard</a>
+        <div class="nav-section">Account</div>
+        <a class="nav-item" href="/settings">⚙️ Settings</a>
+        <a class="nav-item" href="#" onclick="alert('Coming soon')">💳 Billing</a>
+        <a class="nav-item" href="/docs">📖 Documentation</a>
+        <a class="nav-item" href="/admin">🔐 Admin Panel</a>
+        <div class="sidebar-bottom">
+            <div class="user-info">
+                <div class="user-avatar" id="user-initial">U</div>
+                <div class="user-details">
+                    <div class="user-name" id="user-name">User</div>
+                    <div class="user-email" id="user-email">email</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div>
+                <h1>Dashboard</h1>
+                <p class="header-sub">Manage your AI chatbots</p>
+            </div>
+            <button class="btn-primary" onclick="openCreateModal()">+ New Bot</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon stat-icon-purple">🤖</div>
+                </div>
+                <div class="stat-value" id="stat-bots">0</div>
+                <div class="stat-label">Total Bots</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon stat-icon-green">💬</div>
+                </div>
+                <div class="stat-value" id="stat-messages">0</div>
+                <div class="stat-label">Total Messages</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon stat-icon-blue">📄</div>
+                </div>
+                <div class="stat-value" id="stat-sources">0</div>
+                <div class="stat-label">Knowledge Sources</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon stat-icon-orange">⭐</div>
+                </div>
+                <div class="stat-value" id="stat-satisfaction">—</div>
+                <div class="stat-label">Satisfaction</div>
+            </div>
+        </div>
+
+        <div class="section-title">Your Bots</div>
+        <div class="bots-grid" id="bots-grid"></div>
+    </div>
+</div>
+
+<!-- Create Bot Modal -->
+<div class="modal-overlay" id="create-modal">
+    <div class="modal">
+        <h2>Create New Bot</h2>
+        <p class="modal-sub">Choose a template or start from scratch</p>
+
+        <div class="template-grid" id="templates">
+            <div class="template-card selected" onclick="selectTemplate('blank', this)">
+                <div class="template-icon">➕</div>
+                <div class="template-name">Blank Bot</div>
+                <div class="template-desc">Start from scratch</div>
+            </div>
+            <div class="template-card" onclick="selectTemplate('support', this)">
+                <div class="template-icon">🎧</div>
+                <div class="template-name">Customer Support</div>
+                <div class="template-desc">Answer product questions</div>
+            </div>
+            <div class="template-card" onclick="selectTemplate('sales', this)">
+                <div class="template-icon">💼</div>
+                <div class="template-name">Sales Assistant</div>
+                <div class="template-desc">Qualify leads, book demos</div>
+            </div>
+            <div class="template-card" onclick="selectTemplate('hr', this)">
+                <div class="template-icon">👥</div>
+                <div class="template-name">HR Helper</div>
+                <div class="template-desc">Employee policy queries</div>
+            </div>
+            <div class="template-card" onclick="selectTemplate('docs', this)">
+                <div class="template-icon">📚</div>
+                <div class="template-name">Documentation</div>
+                <div class="template-desc">Answer from docs/wiki</div>
+            </div>
+            <div class="template-card" onclick="selectTemplate('ecommerce', this)">
+                <div class="template-icon">🛒</div>
+                <div class="template-name">E-Commerce</div>
+                <div class="template-desc">Products, orders, returns</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Bot Name</label>
+            <input type="text" id="new-bot-name" placeholder="e.g. ShopBot, HR Helper">
+        </div>
+        <div class="form-group">
+            <label>LLM Provider</label>
+            <select id="new-bot-provider" onchange="updateModels()">
+                <option value="ollama">Ollama (Free, Local)</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Google Gemini (Free tier)</option>
+                <option value="anthropic">Anthropic Claude</option>
+                <option value="groq">Groq (Free tier)</option>
+                <option value="mistral">Mistral</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Model</label>
+            <select id="new-bot-model"></select>
+        </div>
+        <div class="form-group">
+            <label>System Prompt <span style="font-weight:400;color:#9a9aa6">(optional)</span></label>
+            <textarea id="new-bot-prompt" placeholder="You are a helpful assistant for..."></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeCreateModal()">Cancel</button>
+            <button class="btn-primary" onclick="createBot()">Create Bot</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = "";
+let token = localStorage.getItem("token");
+if (!token) window.location.href = "/login";
+const headers = { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+
+// User info
+const userName = localStorage.getItem("user_name") || "User";
+const userEmail = localStorage.getItem("user_email") || "";
+document.getElementById("user-name").textContent = userName;
+document.getElementById("user-email").textContent = userEmail;
+document.getElementById("user-initial").textContent = userName.charAt(0).toUpperCase();
+
+// Templates
+const TEMPLATES = {
+    blank: { name: "", prompt: "" },
+    support: { name: "Support Bot", prompt: "You are a friendly customer support agent. Answer questions about products, services, and policies. Be helpful, empathetic, and concise. If you cannot answer, offer to connect with a human agent." },
+    sales: { name: "Sales Assistant", prompt: "You are a sales assistant. Help visitors understand products, answer pricing questions, and encourage them to book a demo. Be professional and persuasive but not pushy." },
+    hr: { name: "HR Helper", prompt: "You are an internal HR assistant. Answer employee questions about company policies, leave, benefits, and procedures. Be accurate and professional." },
+    docs: { name: "Docs Bot", prompt: "You are a documentation assistant. Answer technical questions based on the provided documentation. Give code examples when helpful." },
+    ecommerce: { name: "Shop Assistant", prompt: "You are a shopping assistant. Help customers find products, check availability, understand return policies, and track orders." },
+};
+
+const MODEL_OPTIONS = {
+    ollama: ["gemma3:latest", "gemma4:e4b", "llama3.2-vision:latest", "qwen3-vl:8b", "llava:latest", "gpt-oss:20b"],
+    openai: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
+    gemini: ["gemini-2.0-flash", "gemini-2.0-pro", "gemini-1.5-flash"],
+    anthropic: ["claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"],
+    groq: ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+    mistral: ["mistral-large-latest", "mistral-small-latest"],
+};
+
+function updateModels() {
+    const provider = document.getElementById("new-bot-provider").value;
+    const modelSelect = document.getElementById("new-bot-model");
+
+    if (provider === "ollama") {
+        fetch("/api/models/local")
+            .then(r => r.json())
+            .then(data => {
+                const models = data.models || [];
+                if (models.length > 0) {
+                    modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+                } else {
+                    modelSelect.innerHTML = '<option value="gemma3:latest">gemma3:latest</option>';
+                }
+            })
+            .catch(() => {
+                modelSelect.innerHTML = '<option value="gemma3:latest">gemma3:latest</option>';
+            });
+    } else {
+        const models = MODEL_OPTIONS[provider] || [];
+        modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+    }
+}
+updateModels();
+
+function selectTemplate(key, el) {
+    const t = TEMPLATES[key];
+    document.getElementById("new-bot-name").value = t.name;
+    document.getElementById("new-bot-prompt").value = t.prompt;
+    document.querySelectorAll(".template-card").forEach(c => c.classList.remove("selected"));
+    el.classList.add("selected");
+}
+
+// Load bots
+async function loadBots() {
+    const r = await fetch(`${API}/api/bots`, { headers });
+    if (r.status === 401) { window.location.href = "/login"; return; }
+    const bots = await r.json();
+
+    document.getElementById("stat-bots").textContent = bots.length;
+
+    const grid = document.getElementById("bots-grid");
+    grid.innerHTML = "";
+
+    let totalSources = 0;
+
+    for (const bot of bots) {
+        const sr = await fetch(`${API}/api/bots/${bot.id}/knowledge`, { headers });
+        const sources = await sr.json();
+        totalSources += sources.length;
+
+        const card = document.createElement("div");
+        card.className = "bot-card";
+        card.innerHTML = `
+            <div class="bot-card-accent"></div>
+            <div class="bot-card-header">
+                <div class="bot-info">
+                    <div class="bot-icon">🤖</div>
+                    <div>
+                        <div class="bot-name">${bot.name}</div>
+                        <div class="bot-provider">${bot.llm_provider} / ${bot.llm_model}</div>
+                    </div>
+                </div>
+                <span class="bot-badge ${bot.status === 'active' ? 'badge-active' : 'badge-draft'}">${bot.status}</span>
+            </div>
+            <div class="bot-stats">
+                <div class="bot-stat-item">📄 ${sources.length} sources</div>
+                <div class="bot-stat-item">💬 ${bot.message_count || 0} messages</div>
+            </div>
+            <div class="bot-actions">
+                <button class="bot-btn bot-btn-primary" onclick="window.location.href='/bot/${bot.id}'">⚙️ Manage</button>
+                <button class="bot-btn" onclick="copyEmbed('${bot.id}')">📋 Embed</button>
+                <button class="bot-btn bot-btn-danger" onclick="deleteBot('${bot.id}')">🗑️</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    }
+
+    document.getElementById("stat-sources").textContent = totalSources;
+
+    // Create card
+    const createCard = document.createElement("div");
+    createCard.className = "create-card";
+    createCard.onclick = openCreateModal;
+    createCard.innerHTML = `<div class="create-card-inner"><div class="create-card-icon">+</div><p>Create New Bot</p></div>`;
+    grid.appendChild(createCard);
+}
+
+function openCreateModal() { document.getElementById("create-modal").classList.add("open"); }
+function closeCreateModal() { document.getElementById("create-modal").classList.remove("open"); }
+
+async function createBot() {
+    const name = document.getElementById("new-bot-name").value.trim();
+    if (!name) { alert("Bot name required"); return; }
+    const r = await fetch(`${API}/api/bots`, {
+        method: "POST", headers,
+        body: JSON.stringify({
+            name,
+            llm_provider: document.getElementById("new-bot-provider").value,
+            llm_model: document.getElementById("new-bot-model").value,
+            system_prompt: document.getElementById("new-bot-prompt").value,
+        }),
+    });
+    const data = await r.json();
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+    closeCreateModal();
+    window.location.href = `/bot/${data.id}`;
+}
+
+async function deleteBot(id) {
+    if (!confirm("Delete this bot and all its data?")) return;
+    await fetch(`${API}/api/bots/${id}`, { method: "DELETE", headers });
+    loadBots();
+}
+
+function copyEmbed(id) {
+    const code = `<script src="https://yourdomain.com/widget.js" data-bot-id="${id}"><\/script>`;
+    navigator.clipboard.writeText(code);
+    alert("Embed code copied!");
+}
+
+function logout() { localStorage.clear(); window.location.replace("/login"); }
+
+loadBots();
+</script>
+</body>
+</html>

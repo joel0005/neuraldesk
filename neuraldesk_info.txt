@@ -1,0 +1,66 @@
+NeuralDesk — AI Chatbot Builder for Your Business
+
+WHAT IS NEURALDESK?
+NeuralDesk is a RAG-as-a-Service platform that lets any business create AI chatbots trained on their own data. Upload your documents, connect your database, or paste a website URL — and get a smart chatbot on your website in minutes. No coding required.
+
+FEATURES:
+- 34+ Data Sources: Upload PDF, DOCX, Excel, CSV, JSON, TXT, HTML files. Crawl any website URL. Connect MySQL, MongoDB, PostgreSQL, SQLite databases.
+- Any LLM Provider: Use OpenAI GPT-4o, Google Gemini, Anthropic Claude, Mistral, Groq, or run completely local and free with Ollama.
+- One-Line Embed: Copy one script tag, paste it on your website HTML before the closing body tag. The chatbot widget appears instantly on your site.
+- Smart Analytics: See what customers ask most, track unanswered questions, measure satisfaction with thumbs up/down, capture visitor leads automatically.
+- Lead Capture: Collect visitor name and email before chat starts. Export leads to your CRM.
+- Private and Secure: Run on your own servers. Your data never leaves your network. Full control over privacy.
+- Bot Templates: Choose from 6+ pre-built templates — Customer Support, Sales Assistant, HR Helper, Documentation Bot, E-Commerce, or start from scratch.
+- Schema-First Pipeline: When you upload databases or spreadsheets, NeuralDesk auto-cleans the data, detects types, builds a glossary, and gets your confirmation before processing.
+
+HOW IT WORKS:
+Step 1: Sign up for free at neuraldesk.com
+Step 2: Create a new bot — choose a template or start from scratch
+Step 3: Upload your data — PDF, DOCX, Excel, CSV, or paste a website URL
+Step 4: Configure — choose your LLM provider, set bot personality, customize colors
+Step 5: Deploy — copy one line of embed code and paste it on your website
+Your AI chatbot is now live and answering customer questions 24/7.
+
+PRICING:
+Free Plan: ₹0/month — 1 bot, 100 messages/month, 5MB storage, community support.
+Pro Plan: ₹2,999/month — 5 bots, 5000 messages/month, 100MB storage, bring your own API keys, remove NeuralDesk branding, email support.
+Business Plan: ₹9,999/month — Unlimited bots, 50000 messages/month, 1GB storage, database connectors, white-label branding, priority support.
+Enterprise Plan: Custom pricing — Everything in Business plus on-premise deployment, local LLM support, SSO/SAML, custom integrations, dedicated account manager.
+
+SUPPORTED FILE TYPES:
+PDF, DOCX, CSV, XLSX, XLS, JSON, TXT, MD, HTML, HTM
+
+SUPPORTED LLM PROVIDERS:
+Ollama (free, runs locally), OpenAI (GPT-4o, GPT-4o-mini), Google Gemini (gemini-2.0-flash, gemini-2.0-pro), Anthropic Claude (claude-sonnet, claude-haiku), Groq (llama-3.1-70b, mixtral), Mistral (mistral-large, mistral-small).
+
+SUPPORTED DATABASES:
+MySQL, PostgreSQL, MongoDB, SQLite
+
+DEPLOYMENT OPTIONS:
+Website embed widget (one line of code), WhatsApp (coming soon), Telegram (coming soon), Slack (coming soon).
+
+FAQ:
+Q: Do I need coding skills?
+A: No. NeuralDesk is completely no-code. Upload files, configure settings, copy embed code — all through a visual dashboard.
+
+Q: Is my data safe?
+A: Yes. You can run NeuralDesk on your own servers. Data never leaves your infrastructure. We support local LLMs via Ollama for complete privacy.
+
+Q: Can I use my own API keys?
+A: Yes. On Pro plan and above, you can use your own OpenAI, Gemini, Claude, or other API keys.
+
+Q: How fast are the responses?
+A: With cloud LLMs like Groq, responses are under 1 second. With local Ollama models, 3-10 seconds depending on your hardware.
+
+Q: Can I customize the chatbot appearance?
+A: Yes. Change colors, bot name, welcome message, suggested questions, and position on your website.
+
+Q: What happens if the bot cannot answer?
+A: It will say it can only answer from its knowledge base. You can also see unanswered questions in the analytics dashboard and upload more content to cover those topics.
+
+Q: Can I connect my database?
+A: Yes. Connect MySQL, PostgreSQL, MongoDB, or upload a SQLite file. NeuralDesk auto-profiles the data, cleans it, and builds a schema.
+
+CONTACT:
+Email: hello@neuraldesk.com
+Website: neuraldesk.com

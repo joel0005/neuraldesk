@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeuralDesk — Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',system-ui,sans-serif; background:#f5f5f9; -webkit-font-smoothing:antialiased; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .layout { display:flex; min-height:100vh; }
+        .sidebar { width:240px; background:#fff; border-right:1px solid #eeeef2; padding:24px 0; position:fixed; height:100vh; display:flex; flex-direction:column; }
+        .sidebar-logo { padding:0 24px 28px; font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px; }
+        .sidebar-logo-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#5d5fef,#7c3aed); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(93,95,239,0.2); }
+        .sidebar-logo span { color:#5d5fef; }
+        .nav-section { font-size:11px; font-weight:600; color:#b0b0ba; text-transform:uppercase; letter-spacing:0.08em; padding:16px 24px 8px; }
+        .nav-item { display:flex; align-items:center; gap:10px; padding:10px 24px; font-size:14px; color:#6b6b78; cursor:pointer; text-decoration:none; transition:all 0.15s; margin:1px 8px; border-radius:8px; }
+        .nav-item:hover { background:#f5f5f9; color:#16161c; }
+        .nav-item.active { color:#5d5fef; background:#eef2ff; font-weight:600; }
+        .sidebar-bottom { margin-top:auto; padding:16px 24px; border-top:1px solid #eeeef2; }
+        .user-info { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+        .user-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#5d5fef,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:600; }
+        .user-name { font-size:13px; font-weight:600; color:#16161c; }
+        .user-email { font-size:11px; color:#9a9aa6; }
+        .logout-btn { display:flex; align-items:center; gap:8px; font-size:13px; color:#e53e3e; cursor:pointer; padding:8px 0; border:none; background:none; font-family:inherit; font-weight:500; }
+
+        .main { flex:1; margin-left:240px; padding:32px; max-width:900px; }
+        .header { margin-bottom:28px; animation:fadeUp 0.4s both; }
+        .header h1 { font-size:26px; font-weight:700; color:#16161c; }
+        .header-sub { font-size:14px; color:#9a9aa6; margin-top:4px; }
+
+        .doc-card { background:#fff; border-radius:14px; padding:24px; border:1px solid #eeeef2; margin-bottom:14px; animation:fadeUp 0.4s both; cursor:pointer; transition:all 0.2s; }
+        .doc-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.04); transform:translateY(-2px); border-color:#e0e0ff; }
+        .doc-card-header { display:flex; align-items:center; gap:14px; }
+        .doc-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+        .doc-card h3 { font-size:15px; font-weight:600; color:#16161c; margin-bottom:4px; }
+        .doc-card p { font-size:13px; color:#6b6b78; line-height:1.5; }
+
+        .doc-content { display:none; padding:20px 0 0; border-top:1px solid #f0f0f3; margin-top:16px; }
+        .doc-content.open { display:block; }
+        .doc-content h4 { font-size:14px; font-weight:600; color:#16161c; margin:16px 0 8px; }
+        .doc-content p, .doc-content li { font-size:13px; color:#4a4a56; line-height:1.7; }
+        .doc-content ul { padding-left:20px; margin-bottom:12px; }
+        .doc-content code { background:#f0f0f5; padding:2px 8px; border-radius:4px; font-size:12px; font-family:'SF Mono',monospace; color:#5d5fef; }
+        .doc-content pre { background:#1a1a2e; color:#a78bfa; padding:16px; border-radius:10px; font-size:13px; overflow-x:auto; margin:12px 0; font-family:'SF Mono',monospace; }
+
+        .search-box { display:flex; align-items:center; gap:8px; background:#fff; border:1.5px solid #e3e3ea; border-radius:10px; padding:10px 14px; margin-bottom:24px; animation:fadeUp 0.4s 0.1s both; }
+        .search-box input { flex:1; border:none; outline:none; font-size:14px; font-family:inherit; }
+        .search-box span { color:#9a9aa6; }
+
+        @media (max-width:900px) { .sidebar{display:none} .main{margin-left:0} }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="8" r="2.3" fill="#fff"/><circle cx="16.5" cy="6" r="1.7" fill="#fff" opacity="0.85"/><circle cx="16" cy="15.5" r="2.3" fill="#fff"/><line x1="8.7" y1="9" x2="14.4" y2="14.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="8.9" y1="7.2" x2="14.9" y2="6.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/></svg></div>
+            Neural<span>Desk</span>
+        </div>
+        <div class="nav-section">Main</div>
+        <a class="nav-item" href="/dashboard">📊 Dashboard</a>
+        <div class="nav-section">Account</div>
+        <a class="nav-item" href="/settings">⚙️ Settings</a>
+        <a class="nav-item" href="#" onclick="alert('Coming soon')">💳 Billing</a>
+        <a class="nav-item active" href="/docs">📖 Documentation</a>
+        <div class="sidebar-bottom">
+            <div class="user-info">
+                <div class="user-avatar" id="user-initial">U</div>
+                <div><div class="user-name" id="user-name">User</div><div class="user-email" id="user-email">email</div></div>
+            </div>
+            <button class="logout-btn" onclick="localStorage.clear();window.location.href='/login'">🚪 Logout</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1>Documentation</h1>
+            <p class="header-sub">Learn how to use NeuralDesk</p>
+        </div>
+
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" placeholder="Search documentation..." oninput="searchDocs(this.value)">
+        </div>
+
+        <div id="docs-list">
+
+        <div class="doc-card" onclick="toggleDoc(this)" style="animation-delay:0.15s">
+            <div class="doc-card-header">
+                <div class="doc-icon" style="background:#eef2ff">🚀</div>
+                <div><h3>Getting Started</h3><p>Create your first AI chatbot in 5 minutes</p></div>
+            </div>
+            <div class="doc-content">
+                <h4>Step 1: Create a Bot</h4>
+                <p>Go to the Dashboard and click <code>+ New Bot</code>. Choose a template or start from scratch. Give your bot a name and select your LLM provider.</p>
+                <h4>Step 2: Upload Knowledge</h4>
+                <p>Navigate to the Knowledge tab. Upload files (PDF, DOCX, Excel, CSV, JSON, TXT, HTML) or paste a website URL. The system automatically parses, chunks, and embeds your content.</p>
+                <h4>Step 3: Test Your Bot</h4>
+                <p>Switch to the Test Chat tab and ask questions about your uploaded content. The bot will answer using only the information from your documents.</p>
+                <h4>Step 4: Deploy</h4>
+                <p>Go to the Deploy tab and copy the embed code. Add it to your website:</p>
+                <pre>&lt;script src="https://yourdomain.com/widget.js"
+  data-bot-id="your-bot-id"
+  data-api-url="https://yourdomain.com"&gt;&lt;/script&gt;</pre>
+            </div>
+        </div>
+
+        <div class="doc-card" onclick="toggleDoc(this)" style="animation-delay:0.2s">
+            <div class="doc-card-header">
+                <div class="doc-icon" style="background:#ecfdf5">📄</div>
+                <div><h3>Supported Data Sources</h3><p>All file types and databases you can connect</p></div>
+            </div>
+            <div class="doc-content">
+                <h4>File Uploads</h4>
+                <ul>
+                    <li><strong>PDF</strong> — Parsed page by page with text extraction</li>
+                    <li><strong>DOCX</strong> — Microsoft Word documents with heading detection</li>
+                    <li><strong>CSV/Excel</strong> — Spreadsheets converted to structured text</li>
+                    <li><strong>JSON</strong> — Nested JSON flattened to key-value pairs</li>
+                    <li><strong>TXT/MD</strong> — Plain text and Markdown files</li>
+                    <li><strong>HTML</strong> — Web pages with automatic tag cleanup</li>
+                </ul>
+                <h4>URL Crawling</h4>
+                <p>Paste any URL and NeuralDesk will crawl the page, extract the main content (removing navigation, footer, scripts), and add it to your bot's knowledge.</p>
+                <h4>Database Connectors</h4>
+                <ul>
+                    <li><strong>MySQL</strong> — Connect with host, port, database, username, password</li>
+                    <li><strong>MongoDB</strong> — Connect to any MongoDB instance</li>
+                    <li><strong>SQLite</strong> — Upload a .db file directly</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="doc-card" onclick="toggleDoc(this)" style="animation-delay:0.25s">
+            <div class="doc-card-header">
+                <div class="doc-icon" style="background:#eff6ff">🧠</div>
+                <div><h3>LLM Providers</h3><p>Configure your AI model</p></div>
+            </div>
+            <div class="doc-content">
+                <h4>Ollama (Free, Local)</h4>
+                <p>Run AI models on your own machine. No API key needed. Install from <code>ollama.ai</code> and pull a model: <code>ollama pull gemma3:latest</code></p>
+                <h4>OpenAI</h4>
+                <p>Models: <code>gpt-4o</code>, <code>gpt-4o-mini</code>, <code>gpt-4-turbo</code>. Get your key from <code>platform.openai.com</code></p>
+                <h4>Google Gemini</h4>
+                <p>Models: <code>gemini-2.0-flash</code>, <code>gemini-2.0-pro</code>. Free tier available at <code>aistudio.google.com</code></p>
+                <h4>Groq (Fast & Free tier)</h4>
+                <p>Models: <code>llama-3.1-70b</code>, <code>mixtral-8x7b</code>. Ultra-fast inference. Key from <code>console.groq.com</code></p>
+                <h4>Anthropic Claude</h4>
+                <p>Models: <code>claude-sonnet</code>, <code>claude-haiku</code>. Key from <code>console.anthropic.com</code></p>
+            </div>
+        </div>
+
+        <div class="doc-card" onclick="toggleDoc(this)" style="animation-delay:0.3s">
+            <div class="doc-card-header">
+                <div class="doc-icon" style="background:#fff7ed">⚡</div>
+                <div><h3>Widget Customization</h3><p>Customize your chatbot's appearance</p></div>
+            </div>
+            <div class="doc-content">
+                <h4>Bot Settings</h4>
+                <ul>
+                    <li><strong>Persona Name</strong> — The name shown in the chat header</li>
+                    <li><strong>Welcome Message</strong> — First message visitors see</li>
+                    <li><strong>System Prompt</strong> — Instructions that shape how the bot responds</li>
+                    <li><strong>Primary Color</strong> — Widget accent color (default: #6366f1)</li>
+                </ul>
+                <h4>Suggested Questions</h4>
+                <p>Auto-generated from your uploaded content. When you upload a new file, 3 suggested questions are created automatically based on the document.</p>
+            </div>
+        </div>
+
+        <div class="doc-card" onclick="toggleDoc(this)" style="animation-delay:0.35s">
+            <div class="doc-card-header">
+                <div class="doc-icon" style="background:#fdf2f8">📊</div>
+                <div><h3>Analytics & Leads</h3><p>Track performance and capture visitors</p></div>
+            </div>
+            <div class="doc-content">
+                <h4>Analytics Dashboard</h4>
+                <ul>
+                    <li><strong>Total Conversations</strong> — How many chat sessions</li>
+                    <li><strong>Total Messages</strong> — Total messages exchanged</li>
+                    <li><strong>Satisfaction</strong> — Based on thumbs up/down feedback</li>
+                    <li><strong>Unanswered Questions</strong> — Topics your bot couldn't answer</li>
+                </ul>
+                <h4>Lead Capture</h4>
+                <p>The widget collects visitor name and email before chat starts. View all captured leads in the Analytics tab. Use this data to follow up with potential customers.</p>
+                <h4>Improving Your Bot</h4>
+                <p>Check the Unanswered Questions list regularly. Upload more content to cover those topics. Your bot gets smarter with every document you add.</p>
+            </div>
+        </div>
+
+        <div class="doc-card" onclick="toggleDoc(this)" style="animation-delay:0.4s">
+            <div class="doc-card-header">
+                <div class="doc-icon" style="background:#fefce8">🔗</div>
+                <div><h3>API Reference</h3><p>REST API endpoints for developers</p></div>
+            </div>
+            <div class="doc-content">
+                <h4>Authentication</h4>
+                <pre>POST /api/auth/signup   { email, password, name }
+POST /api/auth/login    { email, password }
+→ Returns: { access_token, user_id, name }</pre>
+                <h4>Bots</h4>
+                <pre>POST   /api/bots              Create bot
+GET    /api/bots              List all bots
+GET    /api/bots/:id          Get bot details
+PUT    /api/bots/:id          Update bot
+DELETE /api/bots/:id          Delete bot</pre>
+                <h4>Knowledge</h4>
+                <pre>POST   /api/bots/:id/knowledge/file      Upload file
+POST   /api/bots/:id/knowledge/url       Add URL
+POST   /api/bots/:id/knowledge/database  Connect DB
+GET    /api/bots/:id/knowledge           List sources
+DELETE /api/bots/:id/knowledge/:sid      Delete source</pre>
+                <h4>Chat</h4>
+                <pre>POST /api/v1/chat    { bot_id, message, session_id }
+→ Returns: { answer, sources, confidence }</pre>
+            </div>
+        </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "/login";
+document.getElementById("user-name").textContent = localStorage.getItem("user_name") || "User";
+document.getElementById("user-email").textContent = localStorage.getItem("user_email") || "";
+document.getElementById("user-initial").textContent = (localStorage.getItem("user_name") || "U").charAt(0).toUpperCase();
+
+function toggleDoc(card) {
+    const content = card.querySelector(".doc-content");
+    content.classList.toggle("open");
+}
+
+function searchDocs(query) {
+    query = query.toLowerCase();
+    document.querySelectorAll(".doc-card").forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? "block" : "none";
+    });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeuralDesk — AI Chatbot Builder for Your Business</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #fbfbfd; color: #16161c; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        a { text-decoration: none; color: inherit; }
+
+        /* Animations */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
+        @keyframes pulse { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
+        @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+        .fade-up { opacity:0; transform:translateY(30px); transition:all 0.6s cubic-bezier(0.16,1,0.3,1); }
+        .fade-up.visible { opacity:1; transform:translateY(0); }
+
+        /* Nav */
+        .nav { position:fixed; top:0; left:0; right:0; z-index:1000; background:rgba(251,251,253,0.85); backdrop-filter:blur(12px); border-bottom:1px solid rgba(0,0,0,0.04); }
+        .nav-inner { display:flex; align-items:center; justify-content:space-between; padding:14px 40px; max-width:1200px; margin:0 auto; }
+        .nav-logo { display:flex; align-items:center; gap:10px; font-size:20px; font-weight:700; }
+        .nav-logo-icon { width:36px; height:36px; border-radius:10px; background:#5d5fef; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(93,95,239,0.2); }
+        .nav-logo span { color:#5d5fef; }
+        .nav-links { display:flex; gap:32px; font-size:14px; font-weight:500; color:#6b6b78; }
+        .nav-links a { transition:color 0.2s; }
+        .nav-links a:hover { color:#5d5fef; }
+        .nav-cta { display:flex; gap:10px; }
+        .btn-ghost { padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; color:#5d5fef; border:1px solid #e3e3ea; background:#fff; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+        .btn-ghost:hover { border-color:#5d5fef; background:#f8f8ff; }
+        .btn-solid { padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; color:#fff; background:#5d5fef; border:none; cursor:pointer; font-family:inherit; box-shadow:0 4px 12px rgba(93,95,239,0.2); transition:all 0.2s; }
+        .btn-solid:hover { background:#4f51e0; transform:translateY(-1px); }
+        .hamburger { display:none; background:none; border:none; font-size:24px; cursor:pointer; }
+
+        /* Hero */
+        .hero { text-align:center; padding:140px 40px 80px; max-width:850px; margin:0 auto; position:relative; }
+        .hero-bg { position:absolute; top:-100px; left:50%; transform:translateX(-50%); width:800px; height:800px; background:radial-gradient(circle, rgba(93,95,239,0.08) 0%, transparent 70%); pointer-events:none; }
+        .hero-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 16px; border-radius:20px; background:#eef2ff; color:#5d5fef; font-size:13px; font-weight:600; margin-bottom:28px; animation:fadeUp 0.6s both; }
+        .hero-badge-dot { width:6px; height:6px; border-radius:50%; background:#5d5fef; animation:pulse 2s infinite; }
+        .hero h1 { font-size:56px; font-weight:800; letter-spacing:-0.035em; line-height:1.08; margin-bottom:20px; animation:fadeUp 0.6s 0.1s both; }
+        .hero h1 span { background:linear-gradient(135deg,#5d5fef,#8b5cf6,#5d5fef); background-size:200% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:fadeUp 0.6s 0.1s both; }
+        .hero p { font-size:18px; color:#6b6b78; line-height:1.65; margin-bottom:36px; max-width:580px; margin-left:auto; margin-right:auto; animation:fadeUp 0.6s 0.2s both; }
+        .hero-buttons { display:flex; gap:12px; justify-content:center; animation:fadeUp 0.6s 0.3s both; }
+        .btn-large { padding:15px 32px; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; font-family:inherit; border:none; transition:all 0.2s; }
+        .btn-primary { background:#5d5fef; color:#fff; box-shadow:0 6px 20px rgba(93,95,239,0.25); }
+        .btn-primary:hover { background:#4f51e0; transform:translateY(-2px); box-shadow:0 10px 28px rgba(93,95,239,0.3); }
+        .btn-secondary { background:#fff; color:#16161c; border:1px solid #e3e3ea; }
+        .btn-secondary:hover { border-color:#5d5fef; color:#5d5fef; }
+        .hero-note { font-size:13px; color:#9a9aa6; margin-top:16px; animation:fadeUp 0.6s 0.4s both; }
+
+        /* Logos */
+        .logos { padding:40px; text-align:center; overflow:hidden; }
+        .logos p { font-size:12px; font-weight:600; color:#b0b0ba; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:20px; }
+        .logos-row { display:flex; justify-content:center; gap:40px; align-items:center; opacity:0.4; }
+        .logos-row span { font-size:18px; font-weight:700; color:#999; }
+
+        /* Stats */
+        .stats { display:flex; justify-content:center; gap:1px; padding:0 40px; max-width:800px; margin:0 auto 60px; background:#f0f0f3; border-radius:16px; overflow:hidden; }
+        .stat { flex:1; text-align:center; padding:28px 20px; background:#fff; }
+        .stat-value { font-size:32px; font-weight:800; color:#5d5fef; }
+        .stat-label { font-size:12px; color:#6b6b78; margin-top:4px; font-weight:500; }
+
+        /* Demo */
+        .demo { padding:40px 40px 80px; max-width:1000px; margin:0 auto; }
+        .demo-window { background:#1a1a2e; border-radius:16px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.12); }
+        .demo-titlebar { background:#16162a; padding:12px 16px; display:flex; align-items:center; gap:8px; }
+        .demo-dot { width:12px; height:12px; border-radius:50%; }
+        .demo-dot.r { background:#ff5f57; }
+        .demo-dot.y { background:#febc2e; }
+        .demo-dot.g { background:#28c840; }
+        .demo-url { margin-left:12px; background:#0d0d1a; border-radius:6px; padding:6px 14px; color:#6b6b78; font-size:12px; flex:1; }
+        .demo-body { padding:40px; display:flex; gap:30px; align-items:flex-start; }
+        .demo-left { flex:1; }
+        .demo-left h3 { color:#fff; font-size:18px; margin-bottom:8px; }
+        .demo-left p { color:#6b6b88; font-size:14px; line-height:1.6; margin-bottom:20px; }
+        .demo-code { background:#0d0d1a; border-radius:10px; padding:16px; font-family:'SF Mono',monospace; font-size:12px; color:#a78bfa; overflow-x:auto; }
+        .demo-code .tag { color:#5d5fef; }
+        .demo-code .attr { color:#22d3ee; }
+        .demo-code .val { color:#fbbf24; }
+        .demo-widget { width:280px; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.3); animation:float 4s ease-in-out infinite; }
+        .demo-widget-header { background:#5d5fef; color:#fff; padding:14px; display:flex; align-items:center; gap:10px; }
+        .demo-widget-avatar { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:16px; }
+        .demo-widget-name { font-size:14px; font-weight:600; }
+        .demo-widget-msgs { padding:14px; }
+        .demo-widget-msg { padding:8px 12px; border-radius:12px; font-size:12px; line-height:1.5; margin-bottom:8px; max-width:85%; }
+        .demo-widget-bot { background:#f0f0f5; border-bottom-left-radius:4px; }
+        .demo-widget-user { background:#5d5fef; color:#fff; margin-left:auto; border-bottom-right-radius:4px; }
+        .demo-widget-input { display:flex; gap:6px; padding:10px 14px; border-top:1px solid #eee; }
+        .demo-widget-input div { flex:1; background:#f5f5f5; border-radius:6px; padding:8px 10px; font-size:11px; color:#999; }
+        .demo-widget-input span { width:28px; height:28px; border-radius:50%; background:#5d5fef; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; }
+
+        /* Features */
+        .features { padding:80px 40px; max-width:1100px; margin:0 auto; }
+        .section-label { text-align:center; font-size:12px; font-weight:700; color:#5d5fef; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:12px; }
+        .section-title { text-align:center; font-size:36px; font-weight:700; letter-spacing:-0.02em; margin-bottom:14px; }
+        .section-sub { text-align:center; font-size:16px; color:#6b6b78; margin-bottom:48px; max-width:550px; margin-left:auto; margin-right:auto; }
+        .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+        .feature-card { background:#fff; border:1px solid #f0f0f3; border-radius:16px; padding:28px; transition:all 0.3s; cursor:default; }
+        .feature-card:hover { box-shadow:0 12px 40px rgba(0,0,0,0.06); transform:translateY(-4px); border-color:#e0e0ff; }
+        .feature-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:16px; }
+        .feature-card h3 { font-size:15px; font-weight:600; margin-bottom:8px; }
+        .feature-card p { font-size:13px; color:#6b6b78; line-height:1.6; }
+        .fi-purple { background:#eef2ff; } .fi-green { background:#ecfdf5; } .fi-blue { background:#eff6ff; }
+        .fi-orange { background:#fff7ed; } .fi-pink { background:#fdf2f8; } .fi-yellow { background:#fefce8; }
+
+        /* How */
+        .how { padding:80px 40px; background:linear-gradient(180deg,#f8f8fc 0%,#fbfbfd 100%); }
+        .how-inner { max-width:900px; margin:0 auto; }
+        .steps { display:flex; gap:0; margin-top:48px; position:relative; }
+        .steps::before { content:''; position:absolute; top:24px; left:60px; right:60px; height:2px; background:linear-gradient(90deg,#5d5fef,#8b5cf6,#5d5fef); opacity:0.2; }
+        .step { flex:1; text-align:center; position:relative; z-index:1; }
+        .step-num { width:48px; height:48px; border-radius:50%; background:#5d5fef; color:#fff; font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; box-shadow:0 4px 12px rgba(93,95,239,0.25); }
+        .step h3 { font-size:15px; font-weight:600; margin-bottom:8px; }
+        .step p { font-size:13px; color:#6b6b78; line-height:1.5; padding:0 10px; }
+
+        /* Pricing */
+        .pricing { padding:80px 40px; max-width:1100px; margin:0 auto; }
+        .pricing-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+        .price-card { background:#fff; border:1px solid #f0f0f3; border-radius:16px; padding:28px 24px; text-align:center; transition:all 0.3s; }
+        .price-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.06); }
+        .price-card.popular { border-color:#5d5fef; box-shadow:0 8px 30px rgba(93,95,239,0.1); position:relative; transform:scale(1.03); }
+        .price-card.popular:hover { transform:scale(1.03) translateY(-4px); }
+        .popular-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#5d5fef; color:#fff; font-size:11px; font-weight:600; padding:4px 14px; border-radius:20px; white-space:nowrap; }
+        .price-name { font-size:18px; font-weight:600; margin-bottom:4px; }
+        .price-amount { font-size:34px; font-weight:800; margin:12px 0 4px; }
+        .price-amount span { font-size:14px; font-weight:500; color:#6b6b78; }
+        .price-desc { font-size:13px; color:#6b6b78; margin-bottom:20px; }
+        .price-features { list-style:none; text-align:left; margin-bottom:24px; }
+        .price-features li { font-size:13px; color:#4a4a56; padding:5px 0; display:flex; gap:8px; align-items:center; }
+        .price-features li::before { content:"✓"; color:#5d5fef; font-weight:700; font-size:12px; }
+        .price-btn { width:100%; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+        .price-btn-outline { background:#fff; color:#5d5fef; border:1px solid #5d5fef; }
+        .price-btn-outline:hover { background:#f8f8ff; }
+        .price-btn-fill { background:#5d5fef; color:#fff; border:none; box-shadow:0 4px 12px rgba(93,95,239,0.2); }
+        .price-btn-fill:hover { background:#4f51e0; }
+
+        /* Testimonials */
+        .testimonials { padding:60px 40px; background:#f8f8fc; }
+        .testimonials-inner { max-width:1000px; margin:0 auto; }
+        .testimonial-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:40px; }
+        .testimonial { background:#fff; border-radius:14px; padding:24px; border:1px solid #f0f0f3; }
+        .testimonial-stars { color:#fbbf24; font-size:14px; margin-bottom:12px; }
+        .testimonial p { font-size:14px; color:#4a4a56; line-height:1.6; margin-bottom:16px; font-style:italic; }
+        .testimonial-author { font-size:13px; font-weight:600; }
+        .testimonial-role { font-size:12px; color:#9a9aa6; }
+
+        /* CTA */
+        .cta { text-align:center; padding:80px 40px; background:linear-gradient(135deg,#5d5fef,#8b5cf6); color:#fff; position:relative; overflow:hidden; }
+        .cta-bg { position:absolute; top:-50%; left:-20%; width:140%; height:200%; background:radial-gradient(circle at 30% 50%, rgba(255,255,255,0.05) 0%, transparent 50%); pointer-events:none; }
+        .cta h2 { font-size:36px; font-weight:700; margin-bottom:16px; position:relative; }
+        .cta p { font-size:16px; opacity:0.85; margin-bottom:32px; position:relative; }
+        .cta .btn-large { background:#fff; color:#5d5fef; position:relative; }
+        .cta .btn-large:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.15); }
+
+        /* Footer */
+        .footer { padding:40px; text-align:center; font-size:13px; color:#9a9aa6; }
+        .footer a { color:#5d5fef; }
+
+        /* Mobile */
+        @media (max-width:900px) {
+            .nav-links { display:none; }
+            .hamburger { display:block; }
+            .hero { padding:120px 24px 60px; }
+            .hero h1 { font-size:34px; }
+            .hero p { font-size:16px; }
+            .hero-buttons { flex-direction:column; align-items:center; }
+            .stats { flex-wrap:wrap; }
+            .stat { min-width:45%; }
+            .features-grid { grid-template-columns:1fr; }
+            .steps { flex-direction:column; gap:24px; }
+            .steps::before { display:none; }
+            .pricing-grid { grid-template-columns:1fr; }
+            .price-card.popular { transform:none; }
+            .testimonial-grid { grid-template-columns:1fr; }
+            .demo-body { flex-direction:column; }
+            .demo-widget { width:100%; }
+            .demo { padding:20px 20px 60px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+    <div class="nav-inner">
+        <div class="nav-logo">
+            <div class="nav-logo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="8" r="2.3" fill="#fff"/><circle cx="16.5" cy="6" r="1.7" fill="#fff" opacity="0.85"/><circle cx="16" cy="15.5" r="2.3" fill="#fff"/><line x1="8.7" y1="9" x2="14.4" y2="14.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><line x1="8.9" y1="7.2" x2="14.9" y2="6.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/></svg>
+            </div>
+            Neural<span>Desk</span>
+        </div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#demo">Demo</a>
+            <a href="#how">How it Works</a>
+            <a href="#pricing">Pricing</a>
+        </div>
+        <div class="nav-cta">
+            <a href="/login"><button class="btn-ghost">Sign In</button></a>
+            <a href="/login"><button class="btn-solid">Get Started Free</button></a>
+        </div>
+        <button class="hamburger" onclick="document.querySelector('.nav-links').style.display=document.querySelector('.nav-links').style.display==='flex'?'none':'flex'">☰</button>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-badge"><div class="hero-badge-dot"></div> Now in Public Beta</div>
+    <h1>Build AI Chatbots<br>Trained on <span>Your Data</span></h1>
+    <p>Upload documents, connect databases, paste URLs — get a smart chatbot on your website in minutes. No coding. No hassle.</p>
+    <div class="hero-buttons">
+        <a href="/login"><button class="btn-large btn-primary">Start Building Free →</button></a>
+        <a href="#demo"><button class="btn-large btn-secondary">Watch Demo</button></a>
+    </div>
+    <p class="hero-note">No credit card required • Free plan forever</p>
+</section>
+
+<!-- Stats -->
+<div class="stats fade-up">
+    <div class="stat"><div class="stat-value">34+</div><div class="stat-label">Data Sources</div></div>
+    <div class="stat"><div class="stat-value">6</div><div class="stat-label">LLM Providers</div></div>
+    <div class="stat"><div class="stat-value">1 Line</div><div class="stat-label">To Embed</div></div>
+    <div class="stat"><div class="stat-value">&lt;60s</div><div class="stat-label">Setup Time</div></div>
+</div>
+
+<!-- Demo -->
+<section class="demo fade-up" id="demo">
+    <div class="demo-window">
+        <div class="demo-titlebar">
+            <div class="demo-dot r"></div><div class="demo-dot y"></div><div class="demo-dot g"></div>
+            <div class="demo-url">yourbusiness.com</div>
+        </div>
+        <div class="demo-body">
+            <div class="demo-left">
+                <h3>One line. That's it.</h3>
+                <p>Add this to your website HTML and your AI chatbot appears instantly. It answers from your uploaded documents automatically.</p>
+                <div class="demo-code">
+                    <span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="val">"neuraldesk.com/widget.js"</span><br>
+                    &nbsp;&nbsp;<span class="attr">data-bot-id</span>=<span class="val">"your-bot-id"</span><span class="tag">&gt;&lt;/script&gt;</span>
+                </div>
+            </div>
+            <div class="demo-widget">
+                <div class="demo-widget-header">
+                    <div class="demo-widget-avatar">🤖</div>
+                    <div class="demo-widget-name">Your Bot</div>
+                </div>
+                <div class="demo-widget-msgs">
+                    <div class="demo-widget-msg demo-widget-bot">Hi! How can I help you today?</div>
+                    <div class="demo-widget-msg demo-widget-user">What are your return policies?</div>
+                    <div class="demo-widget-msg demo-widget-bot">Our return policy allows returns within 30 days of purchase with original receipt. Items must be unused and in original packaging.</div>
+                </div>
+                <div class="demo-widget-input">
+                    <div>Type a message...</div>
+                    <span>➤</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features fade-up" id="features">
+    <div class="section-label">Features</div>
+    <div class="section-title">Everything You Need</div>
+    <div class="section-sub">Build, deploy, and manage AI chatbots that actually know your business.</div>
+    <div class="features-grid">
+        <div class="feature-card"><div class="feature-icon fi-purple">📄</div><h3>Any Data Source</h3><p>Upload PDF, DOCX, Excel, CSV, JSON. Crawl websites. Connect MySQL, MongoDB, PostgreSQL databases.</p></div>
+        <div class="feature-card"><div class="feature-icon fi-green">🧠</div><h3>Any LLM</h3><p>OpenAI, Gemini, Claude, Mistral, Groq — or run completely local and free with Ollama.</p></div>
+        <div class="feature-card"><div class="feature-icon fi-blue">⚡</div><h3>One-Line Embed</h3><p>Copy one script tag. Paste on your site. The chatbot appears. No coding needed.</p></div>
+        <div class="feature-card"><div class="feature-icon fi-orange">📊</div><h3>Smart Analytics</h3><p>Track questions, measure satisfaction, see unanswered topics, capture leads automatically.</p></div>
+        <div class="feature-card"><div class="feature-icon fi-pink">🔒</div><h3>Private & Secure</h3><p>Run on your own servers. Your data never leaves. Full privacy control.</p></div>
+        <div class="feature-card"><div class="feature-icon fi-yellow">🎯</div><h3>Lead Capture</h3><p>Collect names and emails before chat. Export to your CRM or email tool.</p></div>
+    </div>
+</section>
+
+<!-- How -->
+<section class="how fade-up" id="how">
+    <div class="how-inner">
+        <div class="section-label">Simple Setup</div>
+        <div class="section-title">Live in 3 Steps</div>
+        <div class="section-sub">Zero to working AI chatbot in under 5 minutes.</div>
+        <div class="steps">
+            <div class="step"><div class="step-num">1</div><h3>Upload Your Data</h3><p>Drop PDFs, connect database, or paste a URL. We handle parsing and chunking.</p></div>
+            <div class="step"><div class="step-num">2</div><h3>Configure Bot</h3><p>Choose LLM, set personality, customize look. Use templates or start blank.</p></div>
+            <div class="step"><div class="step-num">3</div><h3>Embed & Go Live</h3><p>Copy one line of code. Paste on your website. Your AI bot is live.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section class="testimonials fade-up">
+    <div class="testimonials-inner">
+        <div class="section-label">Testimonials</div>
+        <div class="section-title">Loved by Businesses</div>
+        <div class="testimonial-grid">
+            <div class="testimonial">
+                <div class="testimonial-stars">★★★★★</div>
+                <p>"Set up a support bot for our e-commerce store in 10 minutes. It handles 80% of customer queries automatically now."</p>
+                <div class="testimonial-author">Priya Sharma</div>
+                <div class="testimonial-role">E-Commerce Owner, Mumbai</div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-stars">★★★★★</div>
+                <p>"The fact that I can run it with local LLM means our sensitive HR documents never leave our servers. Perfect for compliance."</p>
+                <div class="testimonial-author">Rajesh Kumar</div>
+                <div class="testimonial-role">IT Director, Bengaluru</div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-stars">★★★★★</div>
+                <p>"We connected our MySQL database and now our internal team queries 5 lakh rows of data just by asking questions in plain English."</p>
+                <div class="testimonial-author">Anitha Rajan</div>
+                <div class="testimonial-role">Data Lead, Chennai</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing -->
+<section class="pricing fade-up" id="pricing">
+    <div class="section-label">Pricing</div>
+    <div class="section-title">Simple, Transparent Pricing</div>
+    <div class="section-sub">Start free. Upgrade when you grow.</div>
+    <div class="pricing-grid">
+        <div class="price-card">
+            <div class="price-name">Free</div>
+            <div class="price-amount">₹0<span>/month</span></div>
+            <div class="price-desc">For trying out</div>
+            <ul class="price-features"><li>1 Bot</li><li>100 messages/month</li><li>5 MB storage</li><li>Community support</li></ul>
+            <a href="/login"><button class="price-btn price-btn-outline">Get Started</button></a>
+        </div>
+        <div class="price-card popular">
+            <div class="popular-badge">Most Popular</div>
+            <div class="price-name">Pro</div>
+            <div class="price-amount">₹2,999<span>/month</span></div>
+            <div class="price-desc">For growing businesses</div>
+            <ul class="price-features"><li>5 Bots</li><li>5,000 messages/month</li><li>100 MB storage</li><li>Your own API keys</li><li>Remove branding</li><li>Email support</li></ul>
+            <a href="/login"><button class="price-btn price-btn-fill">Start Pro Trial</button></a>
+        </div>
+        <div class="price-card">
+            <div class="price-name">Business</div>
+            <div class="price-amount">₹9,999<span>/month</span></div>
+            <div class="price-desc">For teams & agencies</div>
+            <ul class="price-features"><li>Unlimited Bots</li><li>50,000 messages/month</li><li>1 GB storage</li><li>Database connectors</li><li>White-label</li><li>Priority support</li></ul>
+            <a href="/login"><button class="price-btn price-btn-outline">Contact Sales</button></a>
+        </div>
+        <div class="price-card">
+            <div class="price-name">Enterprise</div>
+            <div class="price-amount">Custom</div>
+            <div class="price-desc">For large organizations</div>
+            <ul class="price-features"><li>Everything in Business</li><li>On-premise deploy</li><li>Local LLM support</li><li>SSO / SAML</li><li>Custom integrations</li><li>Dedicated support</li></ul>
+            <a href="/login"><button class="price-btn price-btn-outline">Talk to Us</button></a>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+    <div class="cta-bg"></div>
+    <h2>Ready to Build Your AI Chatbot?</h2>
+    <p>Join hundreds of businesses automating customer support with NeuralDesk.</p>
+    <a href="/login"><button class="btn-large">Start Building Free →</button></a>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>© 2026 NeuralDesk. All rights reserved. | <a href="#">Privacy</a> | <a href="#">Terms</a> | <a href="#">Contact</a></p>
+</footer>
+
+<!-- Scroll animation -->
+<script>
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+
+<!-- NeuralDesk Product Bot — REPLACE THE BOT ID BELOW -->
+<script src="/widget.js" data-bot-id="3f6d14d5-b3c0-49e1-928f-2b39ed84342c" data-api-url="http://localhost:5000"></script>
+
+</body>
+</html>

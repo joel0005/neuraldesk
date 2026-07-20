@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RagBase Chat Widget Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; }
+        .demo-page { max-width: 800px; margin: 40px auto; padding: 20px; }
+        .demo-page h1 { font-size: 24px; margin-bottom: 10px; }
+        .demo-page p { color: #666; margin-bottom: 20px; }
+        .demo-page code { background: #e8e8e8; padding: 8px 16px; border-radius: 6px; display: block; margin: 10px 0; font-size: 14px; }
+        #chat-bubble {
+            position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px;
+            border-radius: 50%; background: #6366f1; color: white; border: none;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; z-index: 9999; transition: transform 0.2s;
+        }
+        #chat-bubble:hover { transform: scale(1.1); }
+        #chat-window {
+            position: fixed; bottom: 90px; right: 24px; width: 370px; height: 520px;
+            background: white; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            display: none; flex-direction: column; z-index: 9999; overflow: hidden;
+        }
+        #chat-window.open { display: flex; }
+        .chat-header {
+            background: #6366f1; color: white; padding: 16px; display: flex;
+            align-items: center; gap: 12px;
+        }
+        .chat-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,0.2); display: flex;
+            align-items: center; justify-content: center; font-size: 18px;
+        }
+        .chat-header-info { flex: 1; }
+        .chat-header-name { font-size: 15px; font-weight: 600; }
+        .chat-header-status { font-size: 12px; opacity: 0.8; }
+        .chat-close { background: none; border: none; color: white; font-size: 20px; cursor: pointer; opacity: 0.7; }
+        .chat-close:hover { opacity: 1; }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px; display: flex;
+            flex-direction: column; gap: 10px;
+        }
+        .msg {
+            max-width: 82%; padding: 10px 14px; border-radius: 14px;
+            font-size: 14px; line-height: 1.5; word-wrap: break-word;
+        }
+        .msg-bot { background: #f0f0f5; color: #1a1a2e; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg-user { background: #6366f1; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg-source { font-size: 11px; color: #888; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+        .msg-feedback { display: flex; gap: 8px; margin-top: 6px; }
+        .msg-feedback button {
+            background: none; border: 1px solid #ddd; border-radius: 6px;
+            padding: 2px 8px; font-size: 12px; cursor: pointer; color: #888;
+        }
+        .msg-feedback button:hover { border-color: #6366f1; color: #6366f1; }
+        .msg-typing { color: #888; font-style: italic; font-size: 13px; }
+        .suggested-q { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .suggested-q button {
+            background: white; border: 1px solid #ddd; border-radius: 20px;
+            padding: 5px 12px; font-size: 12px; cursor: pointer; color: #555;
+        }
+        .suggested-q button:hover { border-color: #6366f1; color: #6366f1; }
+        .chat-input {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px; border-top: 1px solid #eee;
+        }
+        .chat-input input {
+            flex: 1; border: none; outline: none; font-size: 14px;
+            padding: 8px; background: #f5f5f5; border-radius: 8px;
+        }
+        .chat-input button {
+            background: #6366f1; color: white; border: none;
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 16px;
+        }
+        .chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .powered { text-align: center; padding: 6px; font-size: 10px; color: #bbb; }
+        .powered a { color: #999; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="demo-page">
+    <h1>RagBase Chat Widget Demo</h1>
+    <p>This is how the chat widget looks on a client's website. Click the purple bubble to start chatting.</p>
+    <p><strong>How clients add this to their site:</strong></p>
+    <code>&lt;script src="https://cdn.ragbase.com/widget.js" data-bot-id="YOUR_BOT_ID"&gt;&lt;/script&gt;</code>
+</div>
+
+<button id="chat-bubble" onclick="toggleChat()">💬</button>
+
+<div id="chat-window">
+    <div class="chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div class="chat-header-info">
+            <div class="chat-header-name" id="bot-name">Assistant</div>
+            <div class="chat-header-status">Online</div>
+        </div>
+        <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="powered">Powered by <a href="#">RagBase</a></div>
+    <div class="chat-input">
+        <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMessage()">
+        <button onclick="sendMessage()" id="send-btn">➤</button>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CHANGE THIS BOT ID
+// ═══════════════════════════════════════
+const CONFIG = {
+    botId: "cb17e0ac-7ec6-46ea-a47a-33c0f5e4ce45",
+    apiUrl: "http://localhost:5000",
+};
+
+let conversationId = null;
+let isOpen = false;
+let botConfig = null;
+
+// Load bot config from API
+async function loadBotConfig() {
+    try {
+        const r = await fetch(`${CONFIG.apiUrl}/api/v1/bot-config/${CONFIG.botId}`);
+        botConfig = await r.json();
+    } catch(e) {
+        botConfig = { bot_name: "Assistant", welcome_message: "Hi! How can I help?", suggested_questions: [] };
+    }
+}
+loadBotConfig();
+
+function toggleChat() {
+    isOpen = !isOpen;
+    document.getElementById("chat-window").classList.toggle("open", isOpen);
+    document.getElementById("chat-bubble").style.display = isOpen ? "none" : "flex";
+    if (isOpen && document.getElementById("chat-messages").children.length === 0) {
+        showWelcome();
+    }
+}
+
+function showWelcome() {
+    const name = botConfig?.bot_name || "Assistant";
+    const welcome = botConfig?.welcome_message || "Hi! How can I help you?";
+    const questions = botConfig?.suggested_questions || [];
+
+    document.getElementById("bot-name").textContent = name;
+    addMessage(welcome, "bot");
+
+    if (questions.length > 0) {
+        const container = document.getElementById("chat-messages");
+        const div = document.createElement("div");
+        div.className = "suggested-q";
+        questions.forEach(q => {
+            const btn = document.createElement("button");
+            btn.textContent = q;
+            btn.onclick = () => {
+                document.getElementById("chat-input").value = q;
+                sendMessage();
+                div.remove();
+            };
+            div.appendChild(btn);
+        });
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+function addMessage(text, role, sources = []) {
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    div.className = `msg msg-${role}`;
+    div.textContent = text;
+
+    if (sources.length > 0 && role === "bot") {
+        sources.forEach(s => {
+            const src = document.createElement("div");
+            src.className = "msg-source";
+            const page = s.page_number ? ` (Page ${s.page_number})` : "";
+            src.textContent = `📄 ${s.source_name}${page} — score: ${s.score}`;
+            div.appendChild(src);
+        });
+        const fb = document.createElement("div");
+        fb.className = "msg-feedback";
+        fb.innerHTML = `<button onclick="sendFeedback(this, 'thumbs_up')">👍</button><button onclick="sendFeedback(this, 'thumbs_down')">👎</button>`;
+        div.appendChild(fb);
+    }
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+}
+
+function showTyping() {
+    const div = addMessage("Thinking...", "bot");
+    div.classList.add("msg-typing");
+    div.id = "typing";
+    return div;
+}
+
+async function sendMessage() {
+    const input = document.getElementById("chat-input");
+    const message = input.value.trim();
+    if (!message) return;
+
+    input.value = "";
+    addMessage(message, "user");
+
+    const typing = showTyping();
+    document.getElementById("send-btn").disabled = true;
+
+    try {
+        const response = await fetch(`${CONFIG.apiUrl}/api/v1/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                bot_id: CONFIG.botId,
+                message: message,
+                conversation_id: conversationId,
+            }),
+        });
+        const data = await response.json();
+        typing.remove();
+        conversationId = data.conversation_id;
+        addMessage(data.answer, "bot", data.sources || []);
+    } catch (error) {
+        typing.remove();
+        addMessage("Sorry, something went wrong. Please try again.", "bot");
+    }
+
+    document.getElementById("send-btn").disabled = false;
+    document.getElementById("chat-input").focus();
+}
+
+function sendFeedback(btn, feedback) {
+    btn.parentElement.innerHTML = feedback === "thumbs_up" ? "👍 Thanks!" : "👎 Noted";
+}
+</script>
+</body>
+</html>

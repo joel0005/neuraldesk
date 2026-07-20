@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeuralDesk — Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',system-ui,sans-serif; background:#f5f5f9; -webkit-font-smoothing:antialiased; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+        .nav { background:#1a1a2e; color:#fff; padding:16px 32px; display:flex; align-items:center; justify-content:space-between; }
+        .nav-logo { font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px; }
+        .nav-logo span { color:#a78bfa; }
+        .nav-badge { background:#e53e3e; color:#fff; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .nav-right { display:flex; align-items:center; gap:16px; }
+        .nav-right a { color:#a0a0b0; font-size:13px; text-decoration:none; }
+        .nav-right a:hover { color:#fff; }
+
+        .container { max-width:1100px; margin:0 auto; padding:32px; }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; animation:fadeUp 0.4s both; }
+        .stat-card { background:#fff; border-radius:14px; padding:20px; border:1px solid #eeeef2; text-align:center; }
+        .stat-value { font-size:32px; font-weight:700; color:#16161c; }
+        .stat-label { font-size:13px; color:#9a9aa6; margin-top:4px; }
+
+        .section { margin-bottom:28px; animation:fadeUp 0.4s 0.1s both; }
+        .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .section-title { font-size:18px; font-weight:600; color:#16161c; }
+
+        .table { width:100%; background:#fff; border-radius:14px; border:1px solid #eeeef2; overflow:hidden; }
+        .table-header { display:grid; padding:12px 20px; background:#f9f9fb; font-size:12px; font-weight:600; color:#9a9aa6; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #eeeef2; }
+        .table-row { display:grid; padding:14px 20px; border-bottom:1px solid #f5f5f9; align-items:center; font-size:13px; transition:background 0.1s; }
+        .table-row:hover { background:#fafaff; }
+        .table-row:last-child { border-bottom:none; }
+
+        .users-header { grid-template-columns:2fr 1.5fr 1fr 1fr 1fr; }
+        .users-row { grid-template-columns:2fr 1.5fr 1fr 1fr 1fr; }
+        .bots-header { grid-template-columns:1.5fr 1.5fr 1fr 1fr 1fr 1fr; }
+        .bots-row { grid-template-columns:1.5fr 1.5fr 1fr 1fr 1fr 1fr; }
+
+        .user-cell { display:flex; flex-direction:column; }
+        .user-name { font-weight:600; color:#16161c; }
+        .user-email { font-size:12px; color:#9a9aa6; }
+
+        .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; display:inline-block; }
+        .badge-free { background:#f3f4f6; color:#6b7280; }
+        .badge-pro { background:#eef2ff; color:#5d5fef; }
+        .badge-business { background:#ecfdf5; color:#16a34a; }
+        .badge-onpremise { background:#fff7ed; color:#ea580c; }
+        .badge-active { background:#ecfdf5; color:#16a34a; }
+
+        .btn-sm { padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; border:none; transition:all 0.15s; }
+        .btn-purple { background:#5d5fef; color:#fff; }
+        .btn-purple:hover { background:#4f51e0; }
+        .btn-red { background:#fef2f2; color:#e53e3e; border:1px solid #fde8e8; }
+        .btn-red:hover { background:#fee2e2; }
+        .btn-green { background:#ecfdf5; color:#16a34a; border:1px solid #d1fae5; }
+        .btn-green:hover { background:#d1fae5; }
+
+        .plan-select { padding:6px 10px; border:1px solid #e3e3ea; border-radius:8px; font-size:12px; font-family:inherit; outline:none; }
+
+        .login-box { max-width:400px; margin:100px auto; background:#fff; border-radius:16px; padding:32px; border:1px solid #eeeef2; text-align:center; }
+        .login-box h2 { font-size:20px; margin-bottom:8px; }
+        .login-box p { font-size:13px; color:#9a9aa6; margin-bottom:20px; }
+        .login-box input { width:100%; padding:11px 14px; border:1.5px solid #e3e3ea; border-radius:10px; font-size:14px; outline:none; font-family:inherit; margin-bottom:12px; }
+        .login-box input:focus { border-color:#5d5fef; }
+        .login-box button { width:100%; padding:12px; background:#1a1a2e; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
+        .login-box .error { color:#e53e3e; font-size:13px; margin-bottom:12px; display:none; }
+
+        .search-box { padding:10px 14px; border:1.5px solid #e3e3ea; border-radius:10px; font-size:14px; outline:none; font-family:inherit; width:300px; }
+        .search-box:focus { border-color:#5d5fef; }
+
+        @media (max-width:768px) { .stats-grid{grid-template-columns:1fr 1fr} .users-header,.users-row,.bots-header,.bots-row{grid-template-columns:1fr} }
+    </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="admin-login">
+    <div class="login-box">
+        <h2>🔒 Admin Panel</h2>
+        <p>Enter admin secret key to continue</p>
+        <div class="error" id="login-error">Invalid admin key</div>
+        <input type="password" id="admin-key" placeholder="Admin secret key" onkeydown="if(event.key==='Enter')adminLogin()">
+        <button onclick="adminLogin()">Access Admin Panel</button>
+    </div>
+</div>
+
+<!-- Admin Dashboard -->
+<div id="admin-dashboard" style="display:none">
+    <div class="nav">
+        <div class="nav-logo">🤖 Neural<span>Desk</span> <span class="nav-badge">ADMIN</span></div>
+        <div class="nav-right">
+            <a href="/dashboard">← User Dashboard</a>
+            <a href="#" onclick="adminLogout()">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value" id="s-users">0</div><div class="stat-label">Total Users</div></div>
+            <div class="stat-card"><div class="stat-value" id="s-bots">0</div><div class="stat-label">Total Bots</div></div>
+            <div class="stat-card"><div class="stat-value" id="s-messages">0</div><div class="stat-label">Total Messages</div></div>
+            <div class="stat-card"><div class="stat-value" id="s-sources">0</div><div class="stat-label">Knowledge Sources</div></div>
+        </div>
+
+        <!-- Users -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">All Users</div>
+                <input type="text" class="search-box" placeholder="Search users..." oninput="filterUsers(this.value)">
+            </div>
+            <div class="table">
+                <div class="table-header users-header">
+                    <div>User</div>
+                    <div>ID</div>
+                    <div>Plan</div>
+                    <div>Bots</div>
+                    <div>Actions</div>
+                </div>
+                <div id="users-list"></div>
+            </div>
+        </div>
+
+        <!-- All Bots -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">All Bots</div>
+                <input type="text" class="search-box" placeholder="Search bots..." oninput="filterBots(this.value)">
+            </div>
+            <div class="table">
+                <div class="table-header bots-header">
+                    <div>Bot Name</div>
+                    <div>Owner</div>
+                    <div>Provider</div>
+                    <div>Model</div>
+                    <div>Status</div>
+                    <div>Actions</div>
+                </div>
+                <div id="bots-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = "";
+let adminKey = localStorage.getItem("admin_key") || "";
+let allUsers = [];
+let allBots = [];
+
+// Check if already logged in
+if (adminKey) {
+    showDashboard();
+}
+
+function adminLogin() {
+    adminKey = document.getElementById("admin-key").value.trim();
+    if (!adminKey) return;
+
+    fetch(`${API}/api/admin/stats`, { headers: { "X-Admin-Key": adminKey } })
+        .then(r => {
+            if (r.status === 403) throw new Error("Invalid key");
+            return r.json();
+        })
+        .then(() => {
+            localStorage.setItem("admin_key", adminKey);
+            showDashboard();
+        })
+        .catch(() => {
+            document.getElementById("login-error").style.display = "block";
+        });
+}
+
+function adminLogout() {
+    localStorage.removeItem("admin_key");
+    location.reload();
+}
+
+function showDashboard() {
+    document.getElementById("admin-login").style.display = "none";
+    document.getElementById("admin-dashboard").style.display = "block";
+    loadStats();
+    loadUsers();
+    loadAllBots();
+}
+
+const headers = () => ({ "X-Admin-Key": adminKey, "Content-Type": "application/json" });
+
+async function loadStats() {
+    const r = await fetch(`${API}/api/admin/stats`, { headers: { "X-Admin-Key": adminKey } });
+    const data = await r.json();
+    document.getElementById("s-users").textContent = data.total_users;
+    document.getElementById("s-bots").textContent = data.total_bots;
+    document.getElementById("s-messages").textContent = data.total_messages;
+    document.getElementById("s-sources").textContent = data.total_sources;
+}
+
+async function loadUsers() {
+    const r = await fetch(`${API}/api/admin/users`, { headers: { "X-Admin-Key": adminKey } });
+    allUsers = await r.json();
+    renderUsers(allUsers);
+}
+
+function renderUsers(users) {
+    const list = document.getElementById("users-list");
+    list.innerHTML = users.map(u => `
+        <div class="table-row users-row" data-search="${u.email} ${u.name}">
+            <div class="user-cell">
+                <span class="user-name">${u.name || 'No name'}</span>
+                <span class="user-email">${u.email}</span>
+            </div>
+            <div style="font-size:11px;color:#9a9aa6">${u.id.substring(0, 8)}...</div>
+            <div>
+                <select class="plan-select" onchange="changePlan('${u.id}', this.value)">
+                    <option value="free" ${u.plan === 'free' ? 'selected' : ''}>Free (1 bot)</option>
+                    <option value="pro" ${u.plan === 'pro' ? 'selected' : ''}>Pro (5 bots)</option>
+                    <option value="business" ${u.plan === 'business' ? 'selected' : ''}>Business</option>
+                    <option value="onpremise" ${u.plan === 'onpremise' ? 'selected' : ''}>On-Premise (1)</option>
+                    <option value="onpremise_5" ${u.plan === 'onpremise_5' ? 'selected' : ''}>On-Premise (5)</option>
+                    <option value="onpremise_unlimited" ${u.plan === 'onpremise_unlimited' ? 'selected' : ''}>Unlimited</option>
+                </select>
+            </div>
+            <div><button class="btn-sm btn-purple" onclick="viewUserBots('${u.id}', '${u.name}')">View Bots</button></div>
+            <div><button class="btn-sm btn-red" onclick="deleteUser('${u.id}', '${u.email}')">Delete</button></div>
+        </div>
+    `).join("");
+}
+
+async function loadAllBots() {
+    const r = await fetch(`${API}/api/admin/users`, { headers: { "X-Admin-Key": adminKey } });
+    const users = await r.json();
+    allBots = [];
+
+    for (const u of users) {
+        const br = await fetch(`${API}/api/admin/users/${u.id}/bots`, { headers: { "X-Admin-Key": adminKey } });
+        const bots = await br.json();
+        bots.forEach(b => { b.owner_name = u.name; b.owner_email = u.email; });
+        allBots.push(...bots);
+    }
+
+    renderBots(allBots);
+}
+
+function renderBots(bots) {
+    const list = document.getElementById("bots-list");
+    if (bots.length === 0) {
+        list.innerHTML = '<div class="table-row" style="justify-content:center;color:#9a9aa6">No bots found</div>';
+        return;
+    }
+    list.innerHTML = bots.map(b => {
+        const msgs = b.message_count || 0;
+        const sources = b.source_count || 0;
+        const lastMsg = b.last_message_at ? new Date(b.last_message_at).toLocaleDateString() : 'Never';
+        const isInactive = msgs === 0 && sources === 0;
+        const statusBadge = isInactive
+            ? '<span class="badge" style="background:#fff7ed;color:#ea580c">Unused</span>'
+            : `<span class="badge badge-active">Active (${msgs} msgs)</span>`;
+
+        return `<div class="table-row bots-row" data-search="${b.name} ${b.owner_name || ''} ${b.owner_email || ''}">
+            <div style="font-weight:600;color:#16161c">${b.name}</div>
+            <div class="user-cell">
+                <span class="user-name">${b.owner_name || ''}</span>
+                <span class="user-email">${b.owner_email || ''}</span>
+            </div>
+            <div>${b.llm_provider || ''}</div>
+            <div style="font-size:12px">${b.llm_model || ''}</div>
+            <div>${statusBadge}</div>
+            <div>
+                <a href="/bot/${b.id}" class="btn-sm btn-purple" style="text-decoration:none">Manage</a>
+                <button class="btn-sm btn-red" onclick="deleteBot('${b.id}')" style="margin-left:4px">Delete</button>
+            </div>
+        </div>`;
+    }).join("");
+}
+
+async function changePlan(userId, plan) {
+    await fetch(`${API}/api/admin/users/${userId}/plan`, {
+        method: "PUT",
+        headers: headers(),
+        body: JSON.stringify({ plan }),
+    });
+    loadStats();
+}
+
+async function viewUserBots(userId, name) {
+    const r = await fetch(`${API}/api/admin/users/${userId}/bots`, { headers: { "X-Admin-Key": adminKey } });
+    const bots = await r.json();
+    bots.forEach(b => { b.owner_name = name; });
+    renderBots(bots);
+    document.querySelector(".section:last-child .section-title").textContent = `Bots by ${name}`;
+    document.querySelector(".section:last-child").scrollIntoView({ behavior: "smooth" });
+}
+async function deleteBot(botId) {
+    if (!confirm("Delete this bot?")) return;
+    await fetch(`${API}/api/admin/bots/${botId}`, { method: "DELETE", headers: { "X-Admin-Key": adminKey } });
+    loadAllBots();
+    loadStats();
+}
+
+
+
+async function deleteUser(userId, email) {
+    if (!confirm(`Delete user ${email} and ALL their bots? This cannot be undone.`)) return;
+    await fetch(`${API}/api/admin/users/${userId}`, { method: "DELETE", headers: { "X-Admin-Key": adminKey } });
+    loadUsers();
+    loadAllBots();
+    loadStats();
+}
+
+function filterUsers(query) {
+    const filtered = allUsers.filter(u =>
+        (u.email + " " + u.name).toLowerCase().includes(query.toLowerCase())
+    );
+    renderUsers(filtered);
+}
+
+function filterBots(query) {
+    const filtered = allBots.filter(b =>
+        (b.name + " " + (b.owner_name || "") + " " + (b.owner_email || "")).toLowerCase().includes(query.toLowerCase())
+    );
+    renderBots(filtered);
+}
+</script>
+</body>
+</html>
