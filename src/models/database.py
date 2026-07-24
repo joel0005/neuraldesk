@@ -111,6 +111,19 @@ def init_db():
 
         FOREIGN KEY (bot_id) REFERENCES bots(id) ON DELETE CASCADE
     );
+-- Structured DB sources (Text-to-SQL)
+    CREATE TABLE IF NOT EXISTS sql_sources (
+        id TEXT PRIMARY KEY,
+        bot_id TEXT NOT NULL,
+        source_id TEXT NOT NULL,
+        db_path TEXT NOT NULL,
+        db_type TEXT DEFAULT 'sqlite',
+        schema_json TEXT NOT NULL,
+        table_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        FOREIGN KEY (bot_id) REFERENCES bots(id) ON DELETE CASCADE
+    );
 
     -- Conversations
     CREATE TABLE IF NOT EXISTS conversations (

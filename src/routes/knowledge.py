@@ -79,9 +79,11 @@ def upload_file(bot_id):
     )
     db.commit()
 
-    service = IngestionService()
+    bot = db.execute("SELECT embedding_provider, embedding_model FROM bots WHERE id = ?", (bot_id,)).fetchone()
+    ep = bot["embedding_provider"] if bot else ""
+    em = bot["embedding_model"] if bot else ""
+    service = IngestionService(embedding_provider=ep, embedding_model=em)
     result = service.ingest_file(file_path, bot_id, source_id)
-
     if result["success"]:
         db.execute(
             "UPDATE knowledge_sources SET status = ?, chunk_count = ?, ingestion_strategy = ? WHERE id = ?",
@@ -137,9 +139,11 @@ def add_url(bot_id):
     )
     db.commit()
 
-    service = IngestionService()
+    bot_row = db.execute("SELECT embedding_provider, embedding_model FROM bots WHERE id = ?", (bot_id,)).fetchone()
+    ep = bot_row["embedding_provider"] if bot_row else ""
+    em = bot_row["embedding_model"] if bot_row else ""
+    service = IngestionService(embedding_provider=ep, embedding_model=em)
     result = service.ingest_url(url, bot_id, source_id)
-
     if result["success"]:
         db.execute("UPDATE knowledge_sources SET status = ?, chunk_count = ? WHERE id = ?", ("ready", result["chunks_created"], source_id))
     else:
@@ -248,7 +252,8 @@ def connect_database(bot_id):
         text = "\n".join(all_rows)
         chunks = chunker.chunk_text(text, {"source_id": source_id, "source_name": f"{db_type} database", "source_type": "database"})
 
-        emb = EmbeddingService()
+        bot_row = db.execute("SELECT embedding_provider, embedding_model FROM bots WHERE id = ?", (bot_id,)).fetchone()
+        emb = EmbeddingService(provider=bot_row["embedding_provider"] if bot_row else "", model=bot_row["embedding_model"] if bot_row else "")
         vectors = emb.embed_texts([c.content for c in chunks])
 
         vs = VectorStore()
@@ -276,3 +281,112 @@ def connect_database(bot_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 422
+@knowledge.route("/api/bots/<bot_id>/knowledge/database/upload", methods=["POST"])
+def upload_database(bot_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Login required"}), 401
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"error": "Empty filename"}), 400
+
+    source_id = str(uuid.uuid4())
+    upload_dir = os.path.join(config.UPLOAD_DIR, bot_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, f"{source_id}_{file.filename}")
+    file.save(file_path)
+
+    try:
+        from ..sql.engine import SQLEngine
+
+        engine = SQLEngine(file_path)
+        schema = engine.extract_schema(sample_rows=3)
+
+        if schema.get("error"):
+            return jsonify({"error": f"Could not read database: {schema['error']}"}), 422
+
+        tables = schema.get("tables", [])
+        if not tables:
+            return jsonify({"error": "No tables found in database"}), 422
+
+        db = get_db()
+
+        # Save the knowledge source record
+        db.execute(
+            "INSERT INTO knowledge_sources (id, bot_id, type, name, file_path, db_type, status, ingestion_strategy) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (source_id, bot_id, "database", file.filename, file_path, "sqlite", "processing", "text-to-sql"),
+        )
+
+        # Save the schema for Text-to-SQL
+        db.execute(
+            "INSERT INTO sql_sources (id, bot_id, source_id, db_path, db_type, schema_json, table_count) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (str(uuid.uuid4()), bot_id, source_id, file_path, "sqlite", json.dumps(schema), len(tables)),
+        )
+
+        # Save a readable glossary (schema-first business glossary)
+        db.execute(
+            "INSERT INTO business_glossaries (id, bot_id, source_id, table_name, glossary_data, context_text) VALUES (?, ?, ?, ?, ?, ?)",
+            (str(uuid.uuid4()), bot_id, source_id, ", ".join(t["name"] for t in tables),
+             json.dumps(schema), SQLEngine.schema_to_prompt(schema)),
+        )
+        db.commit()
+
+        # Also embed a schema summary so RAG knows this data exists
+        from ..ingestion.chunker import SmartChunker
+        from ..embeddings.service import EmbeddingService
+        from ..vectordb.store import VectorStore
+
+        summary_lines = [f"Database: {file.filename}"]
+        for t in tables:
+            cols = ", ".join(c["name"] for c in t["columns"])
+            summary_lines.append(f"Table {t['name']} has {t.get('row_count', 0)} rows with columns: {cols}")
+        summary_text = "\n".join(summary_lines)
+
+        chunker = SmartChunker()
+        chunks = chunker.chunk_text(summary_text, {
+            "source_id": source_id,
+            "source_name": file.filename,
+            "source_type": "database",
+        })
+
+        bot_row = db.execute("SELECT embedding_provider, embedding_model FROM bots WHERE id = ?", (bot_id,)).fetchone()
+        emb = EmbeddingService(
+            provider=bot_row["embedding_provider"] if bot_row else "",
+            model=bot_row["embedding_model"] if bot_row else "",
+        )
+        vectors = emb.embed_texts([c.content for c in chunks])
+
+        vs = VectorStore()
+        collection = f"bot_{bot_id}"
+        vs.create_collection(collection, emb.dimension)
+
+        ids = [str(uuid.uuid4()) for _ in chunks]
+        payloads = [{"content": c.content, "source_id": source_id, "metadata": c.metadata} for c in chunks]
+        vs.upsert(collection, ids, vectors, payloads)
+
+        db.execute(
+            "UPDATE knowledge_sources SET status = ?, chunk_count = ? WHERE id = ?",
+            ("ready", len(chunks), source_id),
+        )
+        db.commit()
+        db.close()
+
+        return jsonify({
+            "source_id": source_id,
+            "status": "ready",
+            "tables_found": len(tables),
+            "chunks_created": len(chunks),
+            "mode": "text-to-sql",
+        })
+
+    except Exception as e:
+        print(f"  [DB UPLOAD ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 422
+
+        

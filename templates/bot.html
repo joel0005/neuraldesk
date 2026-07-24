@@ -258,6 +258,14 @@
                     </div>
                     <button class="btn-primary" onclick="connectDB()">Connect Database</button>
                 </div>
+                <div id="sqlite-upload" style="display:none;margin-top:14px">
+                    <div class="upload-zone" onclick="document.getElementById('sqlite-file').click()">
+                        <div class="upload-icon">🗄️</div>
+                        <div class="upload-text">Click to upload SQLite database file</div>
+                        <div class="upload-hint">.db, .sqlite, .sqlite3</div>
+                    </div>
+                    <input type="file" id="sqlite-file" style="display:none" accept=".db,.sqlite,.sqlite3" onchange="uploadSqlite()">
+                </div>
                 <div id="db-status" style="margin-top:12px"></div>
             </div>
 
@@ -305,7 +313,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>LLM Provider</label>
-                        <select id="set-provider">
+                        <select id="set-provider" onchange="onProviderChange()">
                             <option value="ollama">Ollama (Free, Local)</option>
                             <option value="openai">OpenAI</option>
                             <option value="gemini">Google Gemini</option>
@@ -314,9 +322,27 @@
                             <option value="mistral">Mistral</option>
                         </select>
                     </div>
-                    <div class="form-group"><label>Model</label><input type="text" id="set-model"><small>e.g. gemma3:latest, gpt-4o-mini, gemini-2.0-flash</small></div>
+                    <div class="form-group"><label>Model</label><select id="set-model"></select><small>Select a model for the chosen provider</small></div>
                 </div>
-                <div class="form-group"><label>API Key <span style="font-weight:400;color:#9a9aa6">(leave empty for Ollama)</span></label><input type="password" id="set-apikey" placeholder="sk-..."></div>
+                <div class="form-group"><label>API Key <span style="font-weight:400;color:#9a9aa6">(leave empty for Ollama)</span></label><input type="password" id="set-apikey" placeholder="sk-..." onchange="updateModelOptions()"></div>
+            </div>
+            <div class="card">
+                <h3>Embedding Model</h3>
+                <div class="card-desc">Choose which model converts your documents into searchable vectors</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Embedding Provider</label>
+                        <select id="set-embed-provider" onchange="updateEmbeddingModels()">
+                            <option value="local">Local (sentence-transformers)</option>
+                            <option value="ollama">Ollama Embedding</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Embedding Model</label>
+                        <select id="set-embed-model"></select>
+                    </div>
+                </div>
+                <div style="font-size:12px;color:#9a9aa6;margin-top:4px">⚠️ Changing the embedding model requires re-uploading all knowledge sources for this bot</div>
             </div>
 
             <div class="card">
@@ -342,10 +368,38 @@
             <div class="card">
                 <h3>Embed on Your Website</h3>
                 <div class="card-desc">Copy this code and paste it before the closing &lt;/body&gt; tag on your website</div>
+                <div class="form-group">
+                    <label>Deployment Type</label>
+                    <select id="deploy-type" onchange="updateEmbedCode()">
+                        <option value="local">Local Network (this PC)</option>
+                        <option value="hosted">Hosted Domain</option>
+                    </select>
+                </div>
+                <div id="hosted-domain-field" style="display:none;margin-bottom:14px">
+                    <div class="form-group">
+                        <label>Your Domain</label>
+                        <input type="text" id="hosted-domain" placeholder="https://yourdomain.com" onchange="updateEmbedCode()">
+                    </div>
+                </div>
                 <div class="embed-box" id="embed-code"></div>
                 <button class="btn-primary" onclick="copyEmbed()" style="margin-top:4px">📋 Copy Embed Code</button>
-            </div>
+                <div style="margin-top:18px;padding:18px;background:#f5f5f9;border-radius:10px;font-size:13px;line-height:1.8;color:#4a4a56">
+                    <strong style="color:#16161c">How to install:</strong><br>
+                    1. Open your website's HTML file (e.g. <code>index.html</code> or <code>base.html</code>)<br>
+                    2. Scroll to the very bottom of the file<br>
+                    3. Find the closing <code>&lt;/body&gt;</code> tag<br>
+                    4. Paste the embed code <strong>directly above</strong> <code>&lt;/body&gt;</code><br><br>
+                    <strong style="color:#16161c">Example:</strong>
+                    <pre style="background:#1a1a2e;color:#a78bfa;padding:14px;border-radius:8px;margin-top:8px;overflow-x:auto;font-size:12px;line-height:1.6">&lt;!-- your existing page content above --&gt;
 
+&lt;script src="..." data-bot-id="..." data-api-url="..."&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+                    <div style="margin-top:12px;padding:10px 14px;background:#fff7ed;border-radius:8px;color:#ea580c;font-size:12px">
+                        ⚠️ <strong>Important:</strong> NeuralDesk must be running for the widget to work. Both your website and NeuralDesk need to be accessible from the same network.
+                    </div>
+                </div>
+            </div>
             <div class="card">
                 <h3>Deployment Channels</h3>
                 <div class="card-desc">Where your bot is available</div>
@@ -417,11 +471,14 @@ async function loadBot() {
     document.getElementById("set-name").value = botData.name || "";
     document.getElementById("set-persona").value = botData.persona_name || "";
     document.getElementById("set-provider").value = botData.llm_provider || "ollama";
-    document.getElementById("set-model").value = botData.llm_model || "";
+    document.getElementById("set-apikey").value = botData.llm_api_key || "";
+    updateModelOptions();
+    document.getElementById("set-embed-provider").value = botData.embedding_provider || "local";
+    updateEmbeddingModels();
     document.getElementById("set-welcome").value = botData.welcome_message || "";
     document.getElementById("set-prompt").value = botData.system_prompt || "";
     document.getElementById("set-color").value = botData.primary_color || "#6366f1";
-    document.getElementById("embed-code").textContent = `<script src="https://yourdomain.com/widget.js" data-bot-id="${botId}" data-api-url="https://yourdomain.com"><\/script>`;
+    updateEmbedCode();
     loadSources();
 }
 
@@ -476,6 +533,7 @@ async function addUrl() {
 function toggleDbFields() {
     const val = document.getElementById("db-type").value;
     document.getElementById("db-fields").classList.toggle("show", val && val !== "sqlite");
+    document.getElementById("sqlite-upload").style.display = val === "sqlite" ? "block" : "none";
 }
 
 async function connectDB() {
@@ -492,6 +550,23 @@ async function connectDB() {
     if (data.error) document.getElementById("db-status").innerHTML = '<div class="error-msg">❌ ' + data.error + '</div>';
     else { document.getElementById("db-status").innerHTML = '<div class="success-msg">✓ Connected! ' + (data.tables_found||0) + ' tables, ' + (data.chunks_created||0) + ' chunks.</div>'; loadSources(); }
 }
+async function uploadSqlite() {
+    const file = document.getElementById("sqlite-file").files[0];
+    if (!file) return;
+    document.getElementById("db-status").innerHTML = '<div class="success-msg" style="background:#eef2ff;color:#5d5fef">⏳ Uploading ' + file.name + '...</div>';
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("db_type", "sqlite");
+    const r = await fetch(`/api/bots/${botId}/knowledge/database/upload`, { method: "POST", headers: { "Authorization": `Bearer ${token}` }, body: formData });
+    const data = await r.json();
+    if (data.error) {
+        document.getElementById("db-status").innerHTML = '<div class="error-msg">❌ ' + data.error + '</div>';
+    } else {
+        document.getElementById("db-status").innerHTML = '<div class="success-msg">✔ Connected! ' + (data.tables_found || 0) + ' tables, ' + (data.chunks_created || 0) + ' chunks.</div>';
+        loadSources();
+    }
+    document.getElementById("sqlite-file").value = "";
+}
 
 // Delete source
 async function deleteSource(sourceId) {
@@ -499,7 +574,101 @@ async function deleteSource(sourceId) {
     await fetch(`/api/bots/${botId}/knowledge/${sourceId}`, { method: "DELETE", headers });
     loadSources();
 }
+// Auto-populate models based on provider
+function onProviderChange() {
+    const provider = document.getElementById("set-provider").value;
+    if (provider !== "ollama") {
+        document.getElementById("set-apikey").value = "";
+    }
+    updateModelOptions();
+}
+function updateModelOptions() {
+    const provider = document.getElementById("set-provider").value;
+    const modelSelect = document.getElementById("set-model");
+    modelSelect.innerHTML = '<option value="">Loading models...</option>';
 
+    if (provider === "ollama") {
+        fetch("/api/models/local", { headers }).then(r => r.json()).then(data => {
+            modelSelect.innerHTML = (data.models || []).map(m => `<option value="${m}">${m}</option>`).join("");
+            if (botData.llm_model) modelSelect.value = botData.llm_model;
+        }).catch(() => { modelSelect.innerHTML = '<option value="">Failed to load models</option>'; });
+
+    } else if (provider === "groq") {
+        const apiKey = document.getElementById("set-apikey").value;
+        if (!apiKey) { modelSelect.innerHTML = '<option value="">Enter API key first</option>'; return; }
+        fetch("https://api.groq.com/openai/v1/models", { headers: { "Authorization": "Bearer " + apiKey } })
+        .then(r => r.json()).then(data => {
+            const skip = ["whisper", "orpheus", "guard", "safeguard", "compound"];
+            const models = (data.data || []).filter(m => m.active !== false && !skip.some(s => m.id.includes(s))).map(m => m.id).sort();
+            modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+            if (botData.llm_model) modelSelect.value = botData.llm_model;
+        }).catch(() => { modelSelect.innerHTML = '<option value="">Failed to load models</option>'; });
+
+    } else if (provider === "openai") {
+        const apiKey = document.getElementById("set-apikey").value;
+        if (!apiKey) { modelSelect.innerHTML = '<option value="">Enter API key first</option>'; return; }
+        fetch("https://api.openai.com/v1/models", { headers: { "Authorization": "Bearer " + apiKey } })
+        .then(r => r.json()).then(data => {
+            const models = (data.data || []).map(m => m.id).filter(m => m.startsWith("gpt-")).sort();
+            modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+            if (botData.llm_model) modelSelect.value = botData.llm_model;
+        }).catch(() => { modelSelect.innerHTML = '<option value="">Failed to load models</option>'; });
+
+    } else if (provider === "anthropic") {
+        const apiKey = document.getElementById("set-apikey").value;
+        if (!apiKey) { modelSelect.innerHTML = '<option value="">Enter API key first</option>'; return; }
+        fetch("https://api.anthropic.com/v1/models", { headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" } })
+        .then(r => r.json()).then(data => {
+            const models = (data.data || []).map(m => m.id).filter(m => m.includes("claude")).sort();
+            modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+            if (botData.llm_model) modelSelect.value = botData.llm_model;
+        }).catch(() => {
+            const fallback = ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-5-20251001"];
+            modelSelect.innerHTML = fallback.map(m => `<option value="${m}">${m}</option>`).join("");
+            if (botData.llm_model) modelSelect.value = botData.llm_model;
+        });
+    } else if (provider === "gemini") {
+        const apiKey = document.getElementById("set-apikey").value;
+        if (!apiKey) { modelSelect.innerHTML = '<option value="">Enter API key first</option>'; return; }
+        fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey)
+        .then(r => r.json()).then(data => {
+            const models = (data.models || []).filter(m => m.name.includes("gemini")).map(m => m.name.replace("models/", "")).sort();
+            modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+            if (botData.llm_model) modelSelect.value = botData.llm_model;
+        }).catch(() => { modelSelect.innerHTML = '<option value="">Failed to load models</option>'; });
+
+    } else if (provider === "mistral") {
+        const apiKey = document.getElementById("set-apikey").value;
+        if (!apiKey) { modelSelect.innerHTML = '<option value="">Enter API key first</option>'; return; }
+        fetch("https://api.mistral.ai/v1/models", { headers: { "Authorization": "Bearer " + apiKey } })
+        .then(r => r.json()).then(data => {
+            const models = (data.data || []).map(m => m.id).sort();
+            modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+            if (botData.llm_model) modelSelect.value = botData.llm_model;
+        }).catch(() => { modelSelect.innerHTML = '<option value="">Failed to load models</option>'; });
+    }
+}
+function updateEmbeddingModels() {
+    const provider = document.getElementById("set-embed-provider").value;
+    const modelSelect = document.getElementById("set-embed-model");
+    modelSelect.innerHTML = '<option value="">Loading...</option>';
+
+    fetch("/api/models/embeddings", { headers }).then(r => r.json()).then(data => {
+        if (provider === "local") {
+            const ids = data.local || [];
+            const labels = data.local_labels || ids;
+            modelSelect.innerHTML = ids.map((m, i) => `<option value="${m}">${labels[i] || m}</option>`).join("");
+        } else if (provider === "ollama") {
+            const models = data.ollama || [];
+            if (models.length === 0) {
+                modelSelect.innerHTML = '<option value="">No embedding models in Ollama. Run: ollama pull nomic-embed-text</option>';
+                return;
+            }
+            modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
+        }
+        if (botData.embedding_model) modelSelect.value = botData.embedding_model;
+    }).catch(() => { modelSelect.innerHTML = '<option value="">Failed to load</option>'; });
+}
 // Settings
 async function saveSettings() {
     await fetch(`/api/bots/${botId}`, { method: "PUT", headers, body: JSON.stringify({
@@ -507,8 +676,11 @@ async function saveSettings() {
         persona_name: document.getElementById("set-persona").value,
         llm_provider: document.getElementById("set-provider").value,
         llm_model: document.getElementById("set-model").value,
+        llm_api_key: document.getElementById("set-apikey").value,
         welcome_message: document.getElementById("set-welcome").value,
         system_prompt: document.getElementById("set-prompt").value,
+        embedding_provider: document.getElementById("set-embed-provider").value,
+        embedding_model: document.getElementById("set-embed-model").value,
         primary_color: document.getElementById("set-color").value,
     })});
     document.getElementById("settings-success").innerHTML = '<div class="success-msg">✓ Settings saved successfully</div>';
@@ -536,11 +708,25 @@ async function testChat() {
 }
 
 // Embed
-function copyEmbed() {
-    navigator.clipboard.writeText(`<script src="https://yourdomain.com/widget.js" data-bot-id="${botId}" data-api-url="https://yourdomain.com"><\/script>`);
-    alert("Embed code copied!");
+function updateEmbedCode() {
+    const type = document.getElementById("deploy-type").value;
+    document.getElementById("hosted-domain-field").style.display = type === "hosted" ? "block" : "none";
+
+    let base;
+    if (type === "local") {
+        base = `http://${window.location.hostname}:${window.location.port}`;
+    } else {
+        base = document.getElementById("hosted-domain").value.replace(/\/+$/, "") || "https://yourdomain.com";
+    }
+
+    document.getElementById("embed-code").textContent = `<script src="${base}/widget.js" data-bot-id="${botId}" data-api-url="${base}"><\/script>`;
 }
 
+function copyEmbed() {
+    const code = document.getElementById("embed-code").textContent;
+    navigator.clipboard.writeText(code);
+    alert("Embed code copied!");
+}
 // Analytics
 async function loadAnalytics() {
     const r = await fetch(`/api/bots/${botId}/analytics`, { headers });

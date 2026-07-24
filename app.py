@@ -1,5 +1,3 @@
-"""RagBase API — Flask Entry Point. Run: python app.py"""
-
 from flask import Flask, jsonify
 from flask_cors import CORS
 from src.config import config
@@ -7,8 +5,15 @@ from src.models.database import init_db
 from src.routes.analytics import analytics
 from flask import Flask, jsonify, render_template
 from src.routes.admin import admin
+import sys, os
 
-app = Flask(__name__)
+if getattr(sys, 'frozen', False):
+    template_folder = os.path.join(sys._MEIPASS, "templates")
+    static_folder = os.path.join(sys._MEIPASS, "static")
+    app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
+else:
+    app = Flask(__name__)
+
 app.config["SECRET_KEY"] = config.SECRET_KEY
 CORS(app)
 @app.after_request
@@ -17,7 +22,6 @@ def no_cache(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
-
 init_db()
 
 from src.routes.auth import auth
@@ -156,12 +160,50 @@ def local_models():
     p = OllamaProvider()
     models = p.list_local_models()
     return jsonify({"models": models})
+@app.route("/api/models/embeddings")
+def embedding_models():
+    from src.embeddings.service import EmbeddingService
+    local_ids, local_labels = EmbeddingService.list_local_models()
+    ollama_models = EmbeddingService.list_ollama_models()
+    return jsonify({"local": local_ids, "local_labels": local_labels, "ollama": ollama_models})
 @app.route("/admin")
 def admin_page():
     return render_template("admin.html")
 
 if __name__ == "__main__":
-    print("\n=== RagBase API running ===")
-    print("URL: http://localhost:5000")
-    print("===========================\n")
-    app.run(host="0.0.0.0", debug=False, port=5000, use_reloader=False)
+    import socket
+
+    def find_free_port(preferred=5000):
+        port = preferred
+        while port < preferred + 100:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.bind(("0.0.0.0", port))
+                s.close()
+                return port
+            except OSError:
+                port += 1
+        return preferred
+
+    def get_local_ip():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "127.0.0.1"
+
+    port = find_free_port(5000)
+    local_ip = get_local_ip()
+
+    print("\n==========================================")
+    print("  NeuralDesk is running!")
+    print(f"  Local:   http://localhost:{port}")
+    print(f"  Network: http://{local_ip}:{port}")
+    print(f"  Admin:   http://localhost:{port}/admin")
+    print("  Press Ctrl+C to stop")
+    print("==========================================\n")
+
+    app.run(host="0.0.0.0", debug=False, port=port, use_reloader=False)

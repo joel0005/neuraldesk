@@ -1,14 +1,23 @@
 import os
+import sys
 from dotenv import load_dotenv
 
-load_dotenv()
+if getattr(sys, 'frozen', False):
+    _env_path = os.path.join(os.path.dirname(sys.executable), '.env')
+else:
+    _env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+
+load_dotenv(_env_path)
 
 
 class Config:
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"
     SECRET_KEY = os.getenv("SECRET_KEY", "change-this")
 
-    BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+    if getattr(sys, 'frozen', False):
+        BASE_DIR = os.path.dirname(sys.executable)
+    else:
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
     DB_PATH = os.path.join(BASE_DIR, "db_data", "ragbase.db")
 
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -24,7 +33,7 @@ class Config:
     DEFAULT_EMBEDDING_PROVIDER = os.getenv("DEFAULT_EMBEDDING_PROVIDER", "local")
     DEFAULT_EMBEDDING_MODEL = os.getenv("DEFAULT_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
-    UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
+    UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(BASE_DIR, "uploads"))
     MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
 
     JWT_SECRET = os.getenv("JWT_SECRET", "change-this")

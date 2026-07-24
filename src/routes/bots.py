@@ -107,11 +107,11 @@ def update_bot(bot_id):
 
     data = request.json
     allowed = [
-        "name", "description", "status", "llm_provider", "llm_model", "temperature",
+        "name", "description", "status", "llm_provider", "llm_model", "llm_api_key", "temperature",
         "max_tokens", "system_prompt", "persona_name", "welcome_message", "fallback_message",
         "suggested_questions", "blocked_words", "top_k", "similarity_threshold",
         "confidence_threshold", "use_reranking", "use_query_rewrite", "require_citations",
-        "primary_color", "position",
+        "primary_color", "position", "embedding_provider", "embedding_model",
     ]
 
     updates = []

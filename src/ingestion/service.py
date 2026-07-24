@@ -10,9 +10,9 @@ from ..vectordb.store import VectorStore
 
 class IngestionService:
 
-    def __init__(self):
+    def __init__(self, embedding_provider: str = "", embedding_model: str = ""):
         self.chunker = SmartChunker(chunk_size=512, overlap=50)
-        self.embedding = EmbeddingService()
+        self.embedding = EmbeddingService(provider=embedding_provider, model=embedding_model)
         self.vector_store = VectorStore()
 
     def ingest_file(self, file_path: str, bot_id: str, source_id: str) -> dict:

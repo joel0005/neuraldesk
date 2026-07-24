@@ -62,8 +62,13 @@ class VectorStore:
         new_data = [{"id": uid, "payload": payload} for uid, payload in zip(ids, payloads)]
 
         if len(existing_vecs) > 0:
-            all_vecs = np.vstack([existing_vecs, new_vecs])
-            all_data = existing_data + new_data
+            if existing_vecs.shape[1] != new_vecs.shape[1]:
+                print(f"  [VectorStore] Dimension changed ({existing_vecs.shape[1]} -> {new_vecs.shape[1]}), replacing collection")
+                all_vecs = new_vecs
+                all_data = new_data
+            else:
+                all_vecs = np.vstack([existing_vecs, new_vecs])
+                all_data = existing_data + new_data
         else:
             all_vecs = new_vecs
             all_data = new_data

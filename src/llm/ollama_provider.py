@@ -26,7 +26,7 @@ class OllamaProvider(BaseLLMProvider):
                     "num_predict": max_tokens,
                 },
             },
-            timeout=120,
+            timeout=200,
         )
         response.raise_for_status()
         data = response.json()
