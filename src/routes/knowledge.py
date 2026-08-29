@@ -53,6 +53,61 @@ def generate_suggested_questions(bot_id, content):
         print(f"  Could not generate questions: {e}")
         return None
 
+
+def generate_suggested_questions_from_schema(bot_id, schema):
+    """Generate 3 suggested questions tailored to a database schema. If the
+    schema has customer-scoped tables, questions are phrased in first person
+    (e.g. 'Show me my orders') since that's how a real logged-in customer
+    will actually use a bot backed by their own account data."""
+    try:
+        from ..llm.router import llm_router
+        from ..llm.base import LLMMessage
+        from ..sql.engine import SQLEngine
+
+        schema_text = SQLEngine.schema_to_prompt(schema)
+        customer_columns = schema.get("customer_id_columns", {}) or {}
+
+        if customer_columns:
+            style_hint = (
+                "This data is customer-specific (e.g. orders, tickets, accounts). "
+                "Phrase questions in first person, as a logged-in customer would "
+                "ask them — e.g. 'What are my recent orders?' or 'Do I have any "
+                "open support tickets?'"
+            )
+        else:
+            style_hint = (
+                "This is general/shared data, not tied to a specific customer. "
+                "Phrase questions a visitor would ask — e.g. 'What products do "
+                "you sell?'"
+            )
+
+        response = llm_router.generate([
+            LLMMessage("system",
+                "You are a question generator. Based on the database schema below, "
+                "generate exactly 3 short questions a user would likely ask this "
+                f"chatbot. {style_hint} Return ONLY a valid JSON array with exactly "
+                "3 strings. No explanation, no markdown, no code blocks."),
+            LLMMessage("user", f"Database schema:\n\n{schema_text}"),
+        ], max_tokens=300, temperature=0.3)
+
+        text = response.content.strip().replace("```json", "").replace("```", "").strip()
+        start = text.find("[")
+        end = text.rfind("]")
+        if start != -1 and end != -1:
+            text = text[start:end + 1]
+
+        questions = json.loads(text)
+        if isinstance(questions, list) and len(questions) >= 1:
+            questions = [str(q).strip() for q in questions[:3] if q]
+            print(f"  Auto-generated schema-based questions: {questions}")
+            return questions
+        return None
+
+    except Exception as e:
+        print(f"  Could not generate schema-based questions: {e}")
+        return None
+
+
 @knowledge.route("/api/bots/<bot_id>/knowledge/file", methods=["POST"])
 def upload_file(bot_id):
     user = get_current_user()
@@ -184,9 +239,6 @@ def delete_source(bot_id, source_id):
     db.execute("DELETE FROM knowledge_sources WHERE id = ? AND bot_id = ?", (source_id, bot_id))
     db.commit()
     db.close()
-    
-
-    
 
     return jsonify({"message": "Source deleted"})
 
@@ -281,6 +333,8 @@ def connect_database(bot_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 422
+
+
 @knowledge.route("/api/bots/<bot_id>/knowledge/database/upload", methods=["POST"])
 def upload_database(bot_id):
     user = get_current_user()
@@ -315,16 +369,20 @@ def upload_database(bot_id):
 
         db = get_db()
 
-        # Save the knowledge source record
+        # Save the knowledge source record — NOT ready yet. Stays in
+        # "pending_review" until the detected schema (especially which
+        # column identifies the customer per table) is confirmed. This is
+        # the schema-first rule: never retrieve from unconfirmed data.
         db.execute(
             "INSERT INTO knowledge_sources (id, bot_id, type, name, file_path, db_type, status, ingestion_strategy) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (source_id, bot_id, "database", file.filename, file_path, "sqlite", "processing", "text-to-sql"),
+            (source_id, bot_id, "database", file.filename, file_path, "sqlite", "pending_review", "text-to-sql"),
         )
 
-        # Save the schema for Text-to-SQL
+        # Save the schema for Text-to-SQL. confirmed=0 means pipeline.py will
+        # refuse to run any SQL against this source until /confirm is called.
         db.execute(
-            "INSERT INTO sql_sources (id, bot_id, source_id, db_path, db_type, schema_json, table_count) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), bot_id, source_id, file_path, "sqlite", json.dumps(schema), len(tables)),
+            "INSERT INTO sql_sources (id, bot_id, source_id, db_path, db_type, schema_json, table_count, confirmed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (str(uuid.uuid4()), bot_id, source_id, file_path, "sqlite", json.dumps(schema), len(tables), 0),
         )
 
         # Save a readable glossary (schema-first business glossary)
@@ -334,53 +392,28 @@ def upload_database(bot_id):
              json.dumps(schema), SQLEngine.schema_to_prompt(schema)),
         )
         db.commit()
-
-        # Also embed a schema summary so RAG knows this data exists
-        from ..ingestion.chunker import SmartChunker
-        from ..embeddings.service import EmbeddingService
-        from ..vectordb.store import VectorStore
-
-        summary_lines = [f"Database: {file.filename}"]
-        for t in tables:
-            cols = ", ".join(c["name"] for c in t["columns"])
-            summary_lines.append(f"Table {t['name']} has {t.get('row_count', 0)} rows with columns: {cols}")
-        summary_text = "\n".join(summary_lines)
-
-        chunker = SmartChunker()
-        chunks = chunker.chunk_text(summary_text, {
-            "source_id": source_id,
-            "source_name": file.filename,
-            "source_type": "database",
-        })
-
-        bot_row = db.execute("SELECT embedding_provider, embedding_model FROM bots WHERE id = ?", (bot_id,)).fetchone()
-        emb = EmbeddingService(
-            provider=bot_row["embedding_provider"] if bot_row else "",
-            model=bot_row["embedding_model"] if bot_row else "",
-        )
-        vectors = emb.embed_texts([c.content for c in chunks])
-
-        vs = VectorStore()
-        collection = f"bot_{bot_id}"
-        vs.create_collection(collection, emb.dimension)
-
-        ids = [str(uuid.uuid4()) for _ in chunks]
-        payloads = [{"content": c.content, "source_id": source_id, "metadata": c.metadata} for c in chunks]
-        vs.upsert(collection, ids, vectors, payloads)
-
-        db.execute(
-            "UPDATE knowledge_sources SET status = ?, chunk_count = ? WHERE id = ?",
-            ("ready", len(chunks), source_id),
-        )
-        db.commit()
         db.close()
+
+        # NOTE: embedding the schema summary + activating this source now
+        # happens in /confirm, once the customer-column mapping is reviewed.
+        # This is intentional — no retrieval before confirmation.
 
         return jsonify({
             "source_id": source_id,
-            "status": "ready",
+            "status": "pending_review",
             "tables_found": len(tables),
-            "chunks_created": len(chunks),
             "mode": "text-to-sql",
+            "schema": {
+                "tables": [
+                    {
+                        "name": t["name"],
+                        "row_count": t.get("row_count", 0),
+                        "columns": [c["name"] for c in t["columns"]],
+                        "detected_customer_column": schema.get("customer_id_columns", {}).get(t["name"]),
+                    }
+                    for t in tables
+                ],
+            },
         })
 
     except Exception as e:
@@ -389,4 +422,118 @@ def upload_database(bot_id):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 422
 
-        
+
+@knowledge.route("/api/bots/<bot_id>/knowledge/database/<source_id>/confirm", methods=["POST"])
+def confirm_database_schema(bot_id, source_id):
+    """Client/admin reviews the auto-detected schema — especially which
+    column identifies the customer in each table — corrects anything wrong,
+    and this locks it in permanently. Only after this does the source go
+    live for Text-to-SQL and get embedded for RAG (schema-first order:
+    detect -> confirm -> THEN retrieval)."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Login required"}), 401
+
+    data = request.json or {}
+
+    db = get_db()
+    row = db.execute(
+        "SELECT * FROM sql_sources WHERE source_id = ? AND bot_id = ?",
+        (source_id, bot_id),
+    ).fetchone()
+
+    if not row:
+        db.close()
+        return jsonify({"error": "Database source not found"}), 404
+
+    try:
+        schema = json.loads(row["schema_json"])
+    except Exception:
+        db.close()
+        return jsonify({"error": "Corrupted schema data"}), 500
+
+    # Expected shape: {"customer_id_columns": {"orders": "customer_id", "products": null, ...}}
+    # If the key isn't sent at all, default to keeping whatever was already
+    # auto-detected — confirming with no explicit changes should never
+    # silently wipe out a working customer-column mapping.
+    if "customer_id_columns" in data:
+        corrections = data.get("customer_id_columns") or {}
+    else:
+        corrections = schema.get("customer_id_columns", {}) or {}
+
+    # Apply corrections on top of what was auto-detected. A null/empty value
+    # means "this table has no customer column" (admin confirmed shared
+    # data). Only tables actually present in the schema are accepted.
+    valid_tables = {t["name"] for t in schema.get("tables", [])}
+    final_customer_columns = {}
+    for table_name, column_name in corrections.items():
+        if table_name in valid_tables and column_name:
+            final_customer_columns[table_name] = column_name
+
+    schema["customer_id_columns"] = final_customer_columns
+    schema_json = json.dumps(schema)
+
+    db.execute(
+        "UPDATE sql_sources SET schema_json = ?, confirmed = 1 WHERE source_id = ? AND bot_id = ?",
+        (schema_json, source_id, bot_id),
+    )
+    db.commit()
+
+    # NOW embed the schema summary for RAG and mark the source ready.
+    from ..ingestion.chunker import SmartChunker
+    from ..embeddings.service import EmbeddingService
+    from ..vectordb.store import VectorStore
+
+    ks = db.execute("SELECT file_path FROM knowledge_sources WHERE id = ?", (source_id,)).fetchone()
+    file_name = os.path.basename(ks["file_path"]) if ks else "database"
+
+    summary_lines = [f"Database: {file_name}"]
+    for t in schema.get("tables", []):
+        cols = ", ".join(c["name"] for c in t["columns"])
+        summary_lines.append(f"Table {t['name']} has {t.get('row_count', 0)} rows with columns: {cols}")
+    summary_text = "\n".join(summary_lines)
+
+    chunker = SmartChunker()
+    chunks = chunker.chunk_text(summary_text, {
+        "source_id": source_id,
+        "source_name": file_name,
+        "source_type": "database",
+    })
+
+    bot_row = db.execute("SELECT embedding_provider, embedding_model FROM bots WHERE id = ?", (bot_id,)).fetchone()
+    emb = EmbeddingService(
+        provider=bot_row["embedding_provider"] if bot_row else "",
+        model=bot_row["embedding_model"] if bot_row else "",
+    )
+    vectors = emb.embed_texts([c.content for c in chunks])
+
+    vs = VectorStore()
+    collection = f"bot_{bot_id}"
+    vs.create_collection(collection, emb.dimension)
+
+    ids = [str(uuid.uuid4()) for _ in chunks]
+    payloads = [{"content": c.content, "source_id": source_id, "metadata": c.metadata} for c in chunks]
+    vs.upsert(collection, ids, vectors, payloads)
+
+    db.execute(
+        "UPDATE knowledge_sources SET status = ?, chunk_count = ? WHERE id = ?",
+        ("ready", len(chunks), source_id),
+    )
+
+    # Auto-generate suggested questions for the widget welcome screen — same
+    # as file/URL uploads get, but tailored to the confirmed schema. Without
+    # this, a bot with only a database source shows no quick-click questions.
+    questions = generate_suggested_questions_from_schema(bot_id, schema)
+    if questions:
+        db.execute("UPDATE bots SET suggested_questions = ? WHERE id = ?", (json.dumps(questions), bot_id))
+        print(f"  Saved suggested questions for bot {bot_id} (database source)")
+
+    db.commit()
+    db.close()
+
+    return jsonify({
+        "status": "ready",
+        "customer_id_columns": final_customer_columns,
+        "chunks_created": len(chunks),
+        "suggested_questions": questions or [],
+    })

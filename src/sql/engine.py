@@ -13,6 +13,15 @@ BLOCKED_KEYWORDS = [
     "replace", "attach", "detach", "pragma", "vacuum", "reindex",
 ]
 
+# Common column-naming patterns used to auto-detect which column identifies
+# the customer in each table, when no real foreign key relationship exists.
+CUSTOMER_ID_PATTERNS = (
+    "customer_id", "customerid", "cust_id",
+    "client_id", "clientid",
+    "user_id", "userid",
+    "account_id", "accountid",
+)
+
 
 class SQLEngine:
     """Reads a SQLite file, extracts schema, generates SQL from questions, runs it safely."""
@@ -62,11 +71,50 @@ class SQLEngine:
                     "samples": samples,
                 })
 
+            schema["customer_id_columns"] = self._detect_customer_columns(cur, schema)
+
             conn.close()
             return schema
 
         except Exception as e:
             return {"error": str(e)}
+
+    # ---------- Customer-column auto-detection ----------
+
+    def _detect_customer_columns(self, cur, schema: dict) -> dict:
+        """Guess which column identifies the customer in each table. Prefers
+        real foreign key relationships (a column that references a table
+        named like customers/clients/users); falls back to common naming
+        patterns when no FK constraints are defined, which is the common
+        case for plain SQLite exports. Runs once at upload time and the
+        result is saved permanently in schema_json."""
+        customer_columns = {}
+
+        # Pass 1: actual FK relationships between tables
+        for t in schema.get("tables", []):
+            table_name = t["name"]
+            try:
+                fks = cur.execute(f'PRAGMA foreign_key_list("{table_name}")').fetchall()
+            except Exception:
+                fks = []
+            for fk in fks:
+                ref_table = fk["table"]
+                from_col = fk["from"]
+                if re.search(r"customer|client|user|account", ref_table or "", re.IGNORECASE):
+                    customer_columns[table_name] = from_col
+                    break
+
+        # Pass 2: naming patterns, for tables with no FK match above
+        for t in schema.get("tables", []):
+            table_name = t["name"]
+            if table_name in customer_columns:
+                continue
+            for c in t["columns"]:
+                if c["name"].lower() in CUSTOMER_ID_PATTERNS:
+                    customer_columns[table_name] = c["name"]
+                    break
+
+        return customer_columns
 
     # ---------- Schema formatting for the LLM ----------
 
@@ -115,15 +163,40 @@ class SQLEngine:
 
     # ---------- SQL generation ----------
 
-    def generate_sql(self, question: str, schema: dict, llm_router, bot: dict) -> dict:
+    def generate_sql(self, question: str, schema: dict, llm_router, bot: dict,
+                      customer_id: str = None, customer_columns: dict = None) -> dict:
         """Ask the LLM to write a SQL query for this question."""
         from ..llm.base import LLMMessage
 
         schema_text = self.schema_to_prompt(schema)
+        customer_columns = customer_columns or {}
+
+        security_rules = ""
+        if customer_columns and customer_id:
+            filter_lines = "\n".join(
+                f'- Table "{t}": you MUST add WHERE "{c}" = \'{customer_id}\''
+                for t, c in customer_columns.items()
+            )
+            security_rules = (
+                "\n\nCRITICAL SECURITY RULE:\n"
+                f"The person asking is customer_id='{customer_id}'. If your query "
+                "uses ANY of these tables, it MUST include this exact filter:\n"
+                f"{filter_lines}\n"
+                "Apply this even for COUNT/SUM/aggregate questions. Never return "
+                "another customer's rows.\n"
+            )
+        elif customer_columns and not customer_id:
+            sensitive = ", ".join(f'"{t}"' for t in customer_columns.keys())
+            security_rules = (
+                "\n\nThe user is not verified/logged in. Do NOT query these "
+                f"customer-specific tables under any circumstance: {sensitive}. "
+                "If the question requires them, return exactly: NO_QUERY\n"
+            )
 
         system = (
             "You are a SQL expert. Write ONE SQLite SELECT query that answers the user's question.\n\n"
-            f"DATABASE SCHEMA:\n{schema_text}\n\n"
+            f"DATABASE SCHEMA:\n{schema_text}\n"
+            f"{security_rules}\n"
             "RULES:\n"
             "- Return ONLY the SQL query. No explanation, no markdown, no code blocks.\n"
             "- Use ONLY tables and columns that exist in the schema above.\n"

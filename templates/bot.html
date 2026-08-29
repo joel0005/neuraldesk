@@ -281,6 +281,10 @@
             <div class="card">
                 <h3>Test Your Bot</h3>
                 <div class="card-desc">Chat with your bot to verify it answers correctly</div>
+                <div class="form-group" style="max-width:450px">
+                    <label>Testing as customer ID <span style="font-weight:400;color:#9a9aa6">(optional — leave blank to test as an anonymous visitor)</span></label>
+                    <input type="text" id="test-customer-id" placeholder="e.g. C001" onchange="resetTestChat()">
+                </div>
                 <div class="chat-container">
                     <div class="chat-box">
                         <div class="chat-header-bar"><div class="chat-header-dot"></div> <span id="chat-header">Bot</span></div>
@@ -689,16 +693,24 @@ async function saveSettings() {
 }
 
 // Test chat
+function resetTestChat() {
+    // Switching who we're testing as should start a clean conversation —
+    // otherwise history from one "customer" could bleed into another's test.
+    testConvId = null;
+    document.getElementById("test-messages").innerHTML = "";
+}
+
 async function testChat() {
     const input = document.getElementById("test-input");
     const msg = input.value.trim();
     if (!msg) return;
+    const customerId = document.getElementById("test-customer-id").value.trim() || null;
     const container = document.getElementById("test-messages");
     container.innerHTML += `<div class="msg msg-user">${msg}</div>`;
     input.value = "";
     container.innerHTML += '<div class="msg msg-bot msg-typing" id="typing">Thinking...</div>';
     container.scrollTop = container.scrollHeight;
-    const r = await fetch('/api/v1/chat', { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bot_id: botId, message: msg, conversation_id: testConvId }) });
+    const r = await fetch('/api/v1/chat', { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bot_id: botId, message: msg, conversation_id: testConvId, customer_id: customerId }) });
     const data = await r.json();
     document.getElementById("typing").remove();
     testConvId = data.conversation_id;
@@ -724,8 +736,31 @@ function updateEmbedCode() {
 
 function copyEmbed() {
     const code = document.getElementById("embed-code").textContent;
-    navigator.clipboard.writeText(code);
-    alert("Embed code copied!");
+
+    function fallbackCopy() {
+        const textarea = document.createElement("textarea");
+        textarea.value = code;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            document.execCommand("copy");
+            alert("Embed code copied!");
+        } catch (e) {
+            alert("Could not copy automatically — please select the code above and copy it manually.");
+        }
+        document.body.removeChild(textarea);
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(code).then(() => {
+            alert("Embed code copied!");
+        }).catch(fallbackCopy);
+    } else {
+        fallbackCopy();
+    }
 }
 // Analytics
 async function loadAnalytics() {

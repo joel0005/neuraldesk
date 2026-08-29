@@ -2,6 +2,7 @@
     const script = document.currentScript;
     const botId = script.getAttribute("data-bot-id");
     const apiUrl = script.getAttribute("data-api-url") || "http://localhost:5000";
+    const customerId = script.getAttribute("data-customer-id") || null;
 
     if (!botId) { console.error("NeuralDesk: data-bot-id is required"); return; }
 
@@ -188,7 +189,7 @@
                 const r = await fetch(`${apiUrl}/api/v1/chat`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ bot_id: botId, message: msg, conversation_id: this.convId, visitor_name: this.visitorName || "", visitor_email: this.visitorEmail || "" }),
+                    body: JSON.stringify({ bot_id: botId, message: msg, conversation_id: this.convId, visitor_name: this.visitorName || "", visitor_email: this.visitorEmail || "", customer_id: customerId }),
                 });
                 const data = await r.json();
                 typing.remove();

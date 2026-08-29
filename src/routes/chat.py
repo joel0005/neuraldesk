@@ -16,6 +16,7 @@ def send_message():
     message = data.get("message", "").strip()
     session_id = data.get("session_id", str(uuid.uuid4()))
     conversation_id = data.get("conversation_id")
+    customer_id = data.get("customer_id")
 
     if not bot_id or not message:
         return jsonify({"error": "bot_id and message required"}), 400
@@ -69,7 +70,10 @@ def send_message():
     # Run RAG pipeline
     try:
         pipeline = RAGPipeline(bot)
-        rag_result = pipeline.run(query=message, conversation_history=history)
+        # customer_id is only used by the Text-to-SQL path (_try_sql) to scope
+        # database queries to this customer's own rows. Document/URL RAG is
+        # untouched and ignores it entirely.
+        rag_result = pipeline.run(query=message, conversation_history=history, customer_id=customer_id)
     except Exception as e:
         print(f"\n!!! RAG ERROR: {e}\n")
         import traceback

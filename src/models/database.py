@@ -120,6 +120,7 @@ def init_db():
         db_type TEXT DEFAULT 'sqlite',
         schema_json TEXT NOT NULL,
         table_count INTEGER DEFAULT 0,
+        confirmed INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
         FOREIGN KEY (bot_id) REFERENCES bots(id) ON DELETE CASCADE
@@ -203,6 +204,17 @@ def init_db():
     );
 
     """)
+
+    # Migration: add "confirmed" to sql_sources for databases created before
+    # the schema-confirmation feature existed. CREATE TABLE IF NOT EXISTS
+    # above won't add columns to an already-existing table, so this handles
+    # upgrading old installs safely (no-op if the column is already there).
+    try:
+        cursor.execute("ALTER TABLE sql_sources ADD COLUMN confirmed INTEGER DEFAULT 0")
+        conn.commit()
+        print("Migrated: added 'confirmed' column to sql_sources.")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     conn.commit()
     conn.close()

@@ -17,13 +17,16 @@ class RAGPipeline:
         )
         self.vector_store = VectorStore()
 
-    def run(self, query: str, conversation_history: list = None) -> dict:
+    def run(self, query: str, conversation_history: list = None, customer_id: str = None) -> dict:
         start_time = time.time()
         conversation_history = conversation_history or []
         bot = self.config
 
-        # Try Text-to-SQL first if this bot has database sources
-        sql_result = self._try_sql(query, bot, start_time)
+        # Try Text-to-SQL first if this bot has database sources.
+        # customer_id is ONLY used inside _try_sql() to scope database answers
+        # to this customer's own rows. Everything below (document/URL RAG) is
+        # completely untouched and never sees customer_id.
+        sql_result = self._try_sql(query, bot, start_time, customer_id=customer_id)
         if sql_result is not None:
             return sql_result
 
@@ -144,9 +147,11 @@ class RAGPipeline:
             "latency_ms": latency,
             "is_fallback": False,
         }
-    def _try_sql(self, query: str, bot: dict, start_time: float):
+
+    def _try_sql(self, query: str, bot: dict, start_time: float, customer_id: str = None):
         """If the bot has a SQL source, try answering with Text-to-SQL. Returns None to fall back to RAG."""
         import json
+        import re
         from ..models.database import get_db
         from ..sql.engine import SQLEngine
 
@@ -171,15 +176,54 @@ class RAGPipeline:
         except Exception:
             return None
 
+        # Customer isolation: auto-detected ONCE when the schema was first built
+        # (upload time), saved permanently as part of schema_json in the shape
+        # {"table_name": "customer_column_name", ...}. A table missing from this
+        # map simply has no customer column (e.g. a shared products table) and
+        # is never filtered. Old schemas built before this feature existed will
+        # have no such key here — they behave exactly as before (no filtering)
+        # until re-processed.
+        customer_columns = schema.get("customer_id_columns", {}) or {}
+
         engine = SQLEngine(row["db_path"])
 
-        gen = engine.generate_sql(query, schema, llm_router, bot)
+        gen = engine.generate_sql(
+            query, schema, llm_router, bot,
+            customer_id=customer_id, customer_columns=customer_columns,
+        )
         if not gen["success"]:
             print(f"  [SQL] {gen['error']} — falling back to RAG")
             return None
 
         sql = gen["sql"]
         print(f"  [SQL] Generated: {sql}")
+
+        # Does THIS query actually touch a customer-scoped table? (A "what
+        # products do you sell" question on a products table should never be
+        # blocked just because the DB also has a customer-scoped orders table.)
+        touched_tables = set(
+            m.lower() for m in re.findall(r"\b(?:from|join)\s+([a-zA-Z_]\w*)", sql, re.IGNORECASE)
+        )
+        sensitive = {t: c for t, c in customer_columns.items() if t.lower() in touched_tables}
+
+        if sensitive:
+            if not customer_id:
+                # Customer-scoped data, but we don't know who's asking. Refuse
+                # rather than risk returning someone else's rows.
+                print(f"  [SQL] Query touches customer data but no customer_id on request — blocking")
+                fallback_msg = bot.get("fallback_message") or "Please verify your account to view this information."
+                return self._response(fallback_msg, is_fallback=True, start=start_time)
+
+            # Safety net: confirm the generated SQL actually filters on the
+            # right column with THIS customer's id before we trust it enough
+            # to execute. If we can't confirm it, refuse instead of guessing.
+            sql_lower = sql.lower()
+            cid = str(customer_id).lower()
+            filter_confirmed = cid in sql_lower and any(c.lower() in sql_lower for c in sensitive.values())
+            if not filter_confirmed:
+                print(f"  [SQL] Generated SQL missing a verified customer filter — blocking")
+                fallback_msg = bot.get("fallback_message") or "I could not safely retrieve that information."
+                return self._response(fallback_msg, is_fallback=True, start=start_time)
 
         exec_result = engine.run_query(sql)
         if not exec_result["success"]:
